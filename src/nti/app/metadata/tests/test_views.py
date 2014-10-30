@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function, unicode_literals, absolute_import, division
+__docformat__ = "restructuredtext en"
+
+# disable: accessing protected members, too many methods
+# pylint: disable=W0212,R0904
+
+import json
+
+from nti.contentfragments.interfaces import IPlainTextContentFragment
+
+from nti.dataserver.contenttypes import Note
+
+from nti.ntiids.ntiids import make_ntiid
+
+from nti.appserver.tests.test_application import TestApp
+
+import nti.dataserver.tests.mock_dataserver as mock_dataserver
+
+from nti.app.metadata.tests import MetadataApplicationTestLayer
+
+from nti.app.testing.application_webtest import ApplicationLayerTest
+from nti.app.testing.decorators import WithSharedApplicationMockDSHandleChanges
+
+class TestAdminViews(ApplicationLayerTest):
+
+	layer = MetadataApplicationTestLayer
+
+	def _create_note(self, msg, owner, containerId=None, title=None):
+		note = Note()
+		if title:
+			note.title = IPlainTextContentFragment(title)
+		note.body = [unicode(msg)]
+		note.creator = owner
+		note.containerId = containerId or make_ntiid(nttype='bleach', specific='manga')
+		return note
+
+	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+	def test_process_queue(self):
+		username = 'ichigo@bleach.com'
+		with mock_dataserver.mock_db_trans(self.ds):
+			ichigo = self._create_user(username=username)
+			note = self._create_note(u'As Nodt Fear', ichigo.username)
+			ichigo.addContainedObject(note)
+
+		testapp = TestApp(self.app)
+		testapp.post('/dataserver2/metadata/process_queue',
+					 extra_environ=self._make_extra_environ(),
+					 status=200)
+			
+		testapp.post('/dataserver2/metadata/process_queue',
+					 json.dumps({'limit': 'xyt'}),
+					 extra_environ=self._make_extra_environ(),
+					 status=422)
+
+	@WithSharedApplicationMockDSHandleChanges(testapp=False, users=True)
+	def test_sync_queue(self):
+		with mock_dataserver.mock_db_trans(self.ds):
+			for x in range(10):
+				usr = self._create_user(username='bankai%s' % x)
+				note = self._create_note(u'Shikai %s' % x, usr.username)
+				usr.addContainedObject(note)
+
+		testapp = TestApp(self.app)
+		testapp.post('/dataserver2/metadata/sync_queue',
+					 extra_environ=self._make_extra_environ(),
+					 status=204)
+
