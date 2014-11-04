@@ -14,6 +14,7 @@ from nti.dataserver.tests.mock_dataserver import mock_db_trans
 
 from nti.app.testing.application_webtest import ApplicationTestLayer
 
+from nti.testing.layers import find_test
 from nti.testing.layers import GCLayerMixin
 from nti.testing.layers import ZopeComponentLayer
 from nti.testing.layers import ConfiguringLayerMixin

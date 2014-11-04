@@ -71,7 +71,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 			raise hexc.HTTPUnprocessableEntity('invalid limit size')
 	
 		now = time.time()
-		total = process_queue(limit)
+		total = process_queue(limit=limit)
 		result = LocatedExternalDict()
 		result['Elapsed'] = time.time() - now
 		result['Total'] = total
@@ -119,4 +119,3 @@ class SyncQueueView(AbstractAuthenticatedView,
 		if catalog_queue.syncQueue():
 			logger.info("Queue synched")
 		return hexc.HTTPNoContent()
-
