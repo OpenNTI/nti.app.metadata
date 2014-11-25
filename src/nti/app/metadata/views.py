@@ -143,7 +143,7 @@ class UnindexMissingView(AbstractAuthenticatedView,
 		broken = result['Broken'] = {}
 		missing = result['Missing'] = set()
 		
-		def _process_ids(self, ids):
+		def _process_ids(ids):
 			for uid in ids:
 				try:
 					obj = intids.queryObject(uid)
@@ -160,7 +160,6 @@ class UnindexMissingView(AbstractAuthenticatedView,
 					broken[uid] = str(type(obj))
 				except (AttributeError):
 					pass
-
 		for index in catalog.values():
 			if IIndexValues.providedBy(index):
 				_process_ids(index.ids())
