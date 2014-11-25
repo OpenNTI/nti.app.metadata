@@ -7,6 +7,10 @@ __docformat__ = "restructuredtext en"
 # disable: accessing protected members, too many methods
 # pylint: disable=W0212,R0904
 
+from hamcrest import is_
+from hamcrest import assert_that
+from hamcrest import has_entries
+
 import json
 
 from nti.contentfragments.interfaces import IPlainTextContentFragment
@@ -67,4 +71,22 @@ class TestAdminViews(ApplicationLayerTest):
 		testapp.post('/dataserver2/metadata/sync_queue',
 					 extra_environ=self._make_extra_environ(),
 					 status=204)
+		
+	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+	def test_unindex_missing(self):
+		username = 'ichigo@bleach.com'
+		with mock_dataserver.mock_db_trans(self.ds):
+			ichigo = self._create_user(username=username)
+			note = self._create_note(u'As Nodt Fear', ichigo.username)
+			ichigo.addContainedObject(note)
 
+		testapp = TestApp(self.app)
+		res = testapp.post('/dataserver2/metadata/unindex_missing',
+					 		extra_environ=self._make_extra_environ(),
+					 		status=200)
+		
+		assert_that(res.json_body, 
+					has_entries('Broken', is_({}),
+								'Missing', is_([]), 
+								'TotalBroken', 0,
+								'TotalMissing', 0) )
