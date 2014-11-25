@@ -3,6 +3,7 @@
 """
 .. $Id$
 """
+
 from __future__ import print_function, unicode_literals, absolute_import, division
 __docformat__ = "restructuredtext en"
 
@@ -17,6 +18,11 @@ from zope import interface
 from zope.container.contained import Contained
 from zope.traversing.interfaces import IPathAdapter
 
+from zc.catalog.interfaces import IIndexValues
+
+from ZODB.interfaces import IBroken
+from ZODB.POSException import POSError
+
 from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
 
@@ -30,6 +36,7 @@ from nti.externalization.externalization import to_external_object
 from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.metadata import metadata_queue
+from nti.metadata import metadata_catalog
 from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
@@ -119,3 +126,46 @@ class SyncQueueView(AbstractAuthenticatedView,
 		if catalog_queue.syncQueue():
 			logger.info("Queue synched")
 		return hexc.HTTPNoContent()
+
+@view_config(route_name='objects.generic.traversal',
+			 name='unindex_missing',
+			 renderer='rest',
+			 request_method='POST',
+			 context=MetadataPathAdapter,
+			 permission=nauth.ACT_MODERATE)
+class UnindexMissingView(AbstractAuthenticatedView, 
+						 ModeledContentUploadRequestUtilsMixin):
+
+	def __call__(self):
+		catalog = metadata_catalog()
+		intids = component.getUtility(zope.intid.IIntIds)
+		result = LocatedExternalDict()
+		broken = result['Broken'] = {}
+		missing = result['Missing'] = set()
+		
+		def _process_ids(self, ids):
+			for uid in ids:
+				try:
+					obj = intids.queryObject(uid)
+					if obj is None:
+						catalog.unindex_doc(uid)
+						missing.add(uid)
+					elif IBroken.providedBy(obj):
+						catalog.unindex_doc(uid)
+						broken[uid] = str(type(obj))
+					elif hasattr(obj, '_p_activate'):
+						obj._p_activate()
+				except (TypeError, POSError):
+					catalog.unindex_doc(uid)
+					broken[uid] = str(type(obj))
+				except (AttributeError):
+					pass
+
+		for index in catalog.values():
+			if IIndexValues.providedBy(index):
+				_process_ids(index.ids())
+				
+		result['Missing'] = list(missing)	
+		result['TotalBroken'] = len(broken)
+		result['TotalMissing'] = len(missing)
+		return result
