@@ -145,17 +145,17 @@ def _process_args(args):
 	return result
 	
 def main():
-	arg_parser = argparse.ArgumentParser(description="Hypatia content reindexer")
+	arg_parser = argparse.ArgumentParser(description="Metadata object reindexer")
 	arg_parser.add_argument('-v', '--verbose', help="Be verbose", action='store_true',
 							 dest='verbose')
 	arg_parser.add_argument('-t', '--types',
 							dest='types',
 							nargs="+",
-							help="The object mime types to index")
+							help="The mime types")
 	arg_parser.add_argument('-u', '--usernames',
 							dest='usernames',
 							nargs="+",
-							help="The object creator user names")
+							help="The user names")
 	arg_parser.add_argument('-l', '--limit',
 							 dest='limit',
 							 help="Queue limit",
@@ -167,7 +167,7 @@ def main():
 		raise IOError("Invalid dataserver environment root directory")
 
 	context = _create_context(env_dir)
-	conf_packages = ('nti.appserver', 'nti.app.hypatia')
+	conf_packages = ('nti.appserver', 'nti.app.metadata')
 
 	run_with_dataserver(environment_dir=env_dir,
 						xmlconfig_packages=conf_packages,
