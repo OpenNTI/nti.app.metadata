@@ -9,6 +9,7 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
+import six
 import time
 
 import zope.intid
@@ -30,6 +31,8 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.dataserver import authorization as nauth
+from nti.dataserver.interfaces import IDataserver
+from nti.dataserver.interfaces import IShardLayout
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.externalization import to_external_object
@@ -42,6 +45,8 @@ from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.utils.maps import CaseInsensitiveDict
 
+from .reindexer import reindex
+
 @interface.implementer(IPathAdapter)
 class MetadataPathAdapter(Contained):
 
@@ -51,6 +56,71 @@ class MetadataPathAdapter(Contained):
 		self.context = context
 		self.request = request
 		self.__parent__ = context
+
+def _make_min_max_btree_range(search_term):
+	min_inclusive = search_term  # start here
+	max_exclusive = search_term[0:-1] + unichr(ord(search_term[-1]) + 1)
+	return min_inclusive, max_exclusive
+
+def is_true(s):
+	return bool(s and str(s).lower() in ('1', 'true', 't', 'yes', 'y', 'on'))
+
+def username_search(search_term):
+	min_inclusive, max_exclusive = _make_min_max_btree_range(search_term)
+	dataserver = component.getUtility(IDataserver)
+	users = IShardLayout(dataserver).users_folder
+	usernames = list(users.iterkeys(min_inclusive, max_exclusive, excludemax=True))
+	return usernames
+
+@view_config(route_name='objects.generic.traversal',
+			 name='reindex',
+			 renderer='rest',
+			 request_method='POST',
+			 context=MetadataPathAdapter,
+			 permission=nauth.ACT_MODERATE)
+class ReIndexView(AbstractAuthenticatedView, 
+				  ModeledContentUploadRequestUtilsMixin):
+	
+	def readInput(self, value=None):
+		result = CaseInsensitiveDict()
+		if self.request.body:
+			values = super(ReIndexView, self).readInput(value=value)
+			result.update(**values)
+		return result
+	
+	def _do_call(self):
+		values = self.readInput()
+		queue_limit = values.get('limit', None)
+		term = values.get('term') or values.get('search')
+		usernames = values.get('usernames') or values.get('username')
+
+		# user search
+		if term:
+			usernames = username_search(term)
+		elif usernames and isinstance(usernames, six.string_types):
+			usernames = usernames.split(',')
+		else:
+			usernames = ()  # ALL
+	
+		accept = values.get('accept') or values.get('mimeTypes') or u''
+		accept = set(accept.split(',')) if accept else ()
+		if accept and '*/*' not in accept:
+			accept = set(accept)
+		else:
+			accept = ()
+	
+		# queue limit
+		if queue_limit is not None:
+			try:
+				queue_limit = int(queue_limit)
+				assert queue_limit > 0 or queue_limit == -1
+			except (ValueError, AssertionError):
+				raise hexc.HTTPUnprocessableEntity('invalid queue size')
+	
+		result = reindex(accept=accept, 
+						 usernames=usernames, 
+						 queue_limit=queue_limit)
+		return result
 
 @view_config(route_name='objects.generic.traversal',
 			 name='process_queue',
