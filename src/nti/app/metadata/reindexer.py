@@ -36,10 +36,10 @@ def get_mimeType(obj):
 
 def reindex(usernames=(), accept=(), queue_limit=None, intids=None):
 	total = 0
-	if usernames:
+	if not usernames:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder
-		usernames = users_folder.keys()
+		usernames = list(users_folder.keys())
 	
 	now = time.time()
 	queue = metadata_queue()
