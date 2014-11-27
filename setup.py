@@ -7,6 +7,9 @@ entry_points = {
     "z3c.autoinclude.plugin": [
 		'target = nti.app',
 	],
+    "console_scripts": [
+        "nti_metadata_reindexer = nti.app.metadata.reindexer:main"
+    ],
 }
 
 setup(
@@ -14,7 +17,7 @@ setup(
     version=VERSION,
     author='Jason Madden',
     author_email='jason@nextthought.com',
-    description="NTI metadata app",
+    description="NTI Metadata App",
     long_description=codecs.open('README.rst', encoding='utf-8').read(),
     license='Proprietary',
     keywords='pyramid preference',
