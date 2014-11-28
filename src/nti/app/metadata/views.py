@@ -16,6 +16,7 @@ import zope.intid
 
 from zope import component
 from zope import interface
+from zope.index.topic import TopicIndex
 from zope.container.contained import Contained
 from zope.traversing.interfaces import IPathAdapter
 
@@ -44,6 +45,8 @@ from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.utils.maps import CaseInsensitiveDict
+
+from nti.zope_catalog.topic import ExtentFilteredSet
 
 from .reindexer import reindex
 
@@ -198,13 +201,13 @@ class SyncQueueView(AbstractAuthenticatedView,
 		return hexc.HTTPNoContent()
 
 @view_config(route_name='objects.generic.traversal',
-			 name='unindex_missing',
+			 name='check_indices',
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_MODERATE)
-class UnindexMissingView(AbstractAuthenticatedView, 
-						 ModeledContentUploadRequestUtilsMixin):
+class CheckIndicesView(AbstractAuthenticatedView, 
+					   ModeledContentUploadRequestUtilsMixin):
 
 	def __call__(self):
 		catalog = metadata_catalog()
@@ -232,7 +235,11 @@ class UnindexMissingView(AbstractAuthenticatedView,
 					pass
 		for index in catalog.values():
 			if IIndexValues.providedBy(index):
-				_process_ids(index.ids())
+				_process_ids(list(index.ids()))
+			elif isinstance(index, TopicIndex):
+				for filter_index in index._filters.values():
+					if isinstance(filter_index, ExtentFilteredSet):
+						_process_ids(filter_index.ids())
 				
 		result['Missing'] = list(missing)	
 		result['TotalBroken'] = len(broken)

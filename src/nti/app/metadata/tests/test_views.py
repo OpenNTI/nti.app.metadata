@@ -73,7 +73,7 @@ class TestAdminViews(ApplicationLayerTest):
 					 status=204)
 		
 	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_unindex_missing(self):
+	def test_check_indices(self):
 		username = 'ichigo@bleach.com'
 		with mock_dataserver.mock_db_trans(self.ds):
 			ichigo = self._create_user(username=username)
@@ -81,7 +81,7 @@ class TestAdminViews(ApplicationLayerTest):
 			ichigo.addContainedObject(note)
 
 		testapp = TestApp(self.app)
-		res = testapp.post('/dataserver2/metadata/unindex_missing',
+		res = testapp.post('/dataserver2/metadata/check_indices',
 					 		extra_environ=self._make_extra_environ(),
 					 		status=200)
 		
