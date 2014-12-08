@@ -56,19 +56,20 @@ def reindex_principal(principal, accept=(), queue=None, intids=None, mimeTypeCou
 			mimeTypeCount[mimeType] = mimeTypeCount[mimeType] + 1 
 	return result, mimeTypeCount
 
-def reindex(usernames=(), system=False, accept=(), queue_limit=None, intids=None):
-	total = 0
-	if not usernames:
+def reindex(usernames=(), all_users=False, system=False, accept=(), 
+			queue_limit=None, intids=None):
+	if all_users:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder
 		usernames = users_folder.keys()
 	
+	total = 0
 	now = time.time()
 	queue = metadata_queue()
 	mimeTypeCount = defaultdict(int)
 	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
 	
-	for username in usernames:
+	for username in usernames or ():
 		if usernames and username not in usernames:
 			continue
 		user = User.get_user(username)
@@ -79,7 +80,7 @@ def reindex(usernames=(), system=False, accept=(), queue_limit=None, intids=None
 		total += count
 
 	if system:
-		count, _ = reindex_principal(system_user, accept, queue=queue, intids=intids,
+		count, _ = reindex_principal(system_user(), accept, queue=queue, intids=intids,
 									 mimeTypeCount=mimeTypeCount)
 		total += count
 		
@@ -154,7 +155,8 @@ def _create_context(env_dir, devmode=False):
 	return context
 
 def _process_args(args):
-	result = reindex(system=args.system,
+	result = reindex(all_users=args.all,
+					 system=args.system,
 					 queue_limit=args.limit,
 					 accept=args.types or (),
 					 usernames=args.usernames or ())
@@ -171,10 +173,6 @@ def main():
 							dest='types',
 							nargs="+",
 							help="The mime types")
-	arg_parser.add_argument('-u', '--usernames',
-							dest='usernames',
-							nargs="+",
-							help="The user names")
 	arg_parser.add_argument('-l', '--limit',
 							 dest='limit',
 							 help="Queue limit",
@@ -182,6 +180,14 @@ def main():
 	arg_parser.add_argument('-s', '--system', help="Include system user", 
 							action='store_true',
 							dest='system')
+	site_group = arg_parser.add_mutually_exclusive_group()
+	site_group.add_argument('-u', '--usernames',
+							dest='usernames',
+							nargs="+",
+							help="The user names")
+	site_group.add_argument('-a', '--all', help="Include all users", 
+							action='store_true',
+							dest='all')
 
 	args = arg_parser.parse_args()
 	env_dir = os.getenv('DATASERVER_DIR')
