@@ -15,6 +15,7 @@ from collections import defaultdict
 import zope.intid
 
 from zope import component
+from zope.security.management import system_user
 
 from ZODB.POSException import POSError
 
@@ -34,16 +35,37 @@ def get_mimeType(obj):
 	result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
 	return result or 'unknown'
 
-def reindex(usernames=(), accept=(), queue_limit=None, intids=None):
+def reindex_principal(principal, accept=(), queue=None, intids=None, mimeTypeCount=None):
+	result = 0
+	mimeTypeCount = defaultdict(int) if mimeTypeCount is None else mimeTypeCount
+	queue = metadata_queue() if queue is None else queue
+	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
+	for iid in get_principal_metadata_objects_intids(principal):
+		try:
+			obj = intids.queryObject(iid)
+			mimeType = get_mimeType(obj)
+			if accept and mimeType not in accept:
+				continue
+			queue.add(iid)
+		except TypeError:
+			pass
+		except POSError:
+			logger.error("ignoring broken object %s", iid)
+		else:
+			result += 1
+			mimeTypeCount[mimeType] = mimeTypeCount[mimeType] + 1 
+	return result, mimeTypeCount
+
+def reindex(usernames=(), system=False, accept=(), queue_limit=None, intids=None):
 	total = 0
 	if not usernames:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder
-		usernames = list(users_folder.keys())
+		usernames = users_folder.keys()
 	
 	now = time.time()
 	queue = metadata_queue()
-	mimeType_count = defaultdict(int)
+	mimeTypeCount = defaultdict(int)
 	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
 	
 	for username in usernames:
@@ -52,21 +74,15 @@ def reindex(usernames=(), accept=(), queue_limit=None, intids=None):
 		user = User.get_user(username)
 		if user is None or not IUser.providedBy(user):
 			continue
-		for iid in get_principal_metadata_objects_intids(user):
-			try:
-				obj = intids.queryObject(iid)
-				mimeType = get_mimeType(obj)
-				if accept and mimeType not in accept:
-					continue
-				queue.add(iid)
-			except TypeError:
-				pass
-			except POSError:
-				logger.error("ignoring broken object %s", iid)
-			else:
-				total += 1
-				mimeType_count[mimeType] = mimeType_count[mimeType] + 1 
+		count, _ = reindex_principal(user, accept, queue=queue, intids=intids,
+									 mimeTypeCount=mimeTypeCount)
+		total += count
 
+	if system:
+		count, _ = reindex_principal(system_user, accept, queue=queue, intids=intids,
+									 mimeTypeCount=mimeTypeCount)
+		total += count
+		
 	if queue_limit is not None:
 		process_queue(limit=queue_limit)
 		
@@ -74,7 +90,7 @@ def reindex(usernames=(), accept=(), queue_limit=None, intids=None):
 	result = LocatedExternalDict()
 	result['Total'] = total
 	result['Elapsed'] = elapsed
-	result['MimeTypeCount'] = dict(mimeType_count)
+	result['MimeTypeCount'] = dict(mimeTypeCount)
 	
 	logger.info("%s object(s) processed in %s(s)", total, elapsed)
 	return result
@@ -138,7 +154,8 @@ def _create_context(env_dir, devmode=False):
 	return context
 
 def _process_args(args):
-	result = reindex(queue_limit=args.limit,
+	result = reindex(system=args.system,
+					 queue_limit=args.limit,
 					 accept=args.types or (),
 					 usernames=args.usernames or ())
 		
@@ -162,6 +179,9 @@ def main():
 							 dest='limit',
 							 help="Queue limit",
 							 type=int)
+	arg_parser.add_argument('-s', '--system', help="Include system user", 
+							action='store_true',
+							dest='system')
 
 	args = arg_parser.parse_args()
 	env_dir = os.getenv('DATASERVER_DIR')

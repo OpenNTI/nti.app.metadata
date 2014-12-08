@@ -47,6 +47,7 @@ from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 from nti.utils.maps import CaseInsensitiveDict
 
 from nti.zope_catalog.topic import ExtentFilteredSet
+from nti.zope_catalog.interfaces import IKeywordIndex
 
 from .reindexer import reindex
 
@@ -81,13 +82,13 @@ def username_search(search_term):
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_MODERATE)
-class ReIndexView(AbstractAuthenticatedView, 
+class ReindexView(AbstractAuthenticatedView, 
 				  ModeledContentUploadRequestUtilsMixin):
 	
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict()
 		if self.request.body:
-			values = super(ReIndexView, self).readInput(value=value)
+			values = super(ReindexView, self).readInput(value=value)
 			result.update(**values)
 		return result
 	
@@ -234,7 +235,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 				except (AttributeError):
 					pass
 		for index in catalog.values():
-			if IIndexValues.providedBy(index):
+			if IIndexValues.providedBy(index) or IKeywordIndex.providedBy(index):
 				_process_ids(list(index.ids()))
 			elif isinstance(index, TopicIndex):
 				for filter_index in index._filters.values():
