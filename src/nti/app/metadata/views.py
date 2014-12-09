@@ -96,6 +96,8 @@ class ReindexView(AbstractAuthenticatedView,
 		values = self.readInput()
 		queue_limit = values.get('limit', None)
 		term = values.get('term') or values.get('search')
+		all_users = values.get('all') or values.get('allUsers')
+		system = values.get('system') or values.get('systemUser')
 		usernames = values.get('usernames') or values.get('username')
 
 		# user search
@@ -104,7 +106,7 @@ class ReindexView(AbstractAuthenticatedView,
 		elif usernames and isinstance(usernames, six.string_types):
 			usernames = usernames.split(',')
 		else:
-			usernames = ()  # ALL
+			usernames = ()
 	
 		accept = values.get('accept') or values.get('mimeTypes') or u''
 		accept = set(accept.split(',')) if accept else ()
@@ -122,8 +124,10 @@ class ReindexView(AbstractAuthenticatedView,
 				raise hexc.HTTPUnprocessableEntity('invalid queue size')
 	
 		result = reindex(accept=accept, 
-						 usernames=usernames, 
-						 queue_limit=queue_limit)
+						 usernames=usernames,
+						 system=is_true(system), 
+						 queue_limit=queue_limit,
+						 all_users=is_true(all_users))
 		return result
 
 @view_config(route_name='objects.generic.traversal',

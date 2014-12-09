@@ -70,8 +70,6 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
 	
 	for username in usernames or ():
-		if usernames and username not in usernames:
-			continue
 		user = User.get_user(username)
 		if user is None or not IUser.providedBy(user):
 			continue

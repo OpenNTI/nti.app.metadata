@@ -8,6 +8,9 @@ __docformat__ = "restructuredtext en"
 # pylint: disable=W0212,R0904
 
 from hamcrest import is_
+from hamcrest import none
+from hamcrest import is_not
+from hamcrest import has_entry
 from hamcrest import assert_that
 from hamcrest import has_entries
 
@@ -90,3 +93,23 @@ class TestAdminViews(ApplicationLayerTest):
 								'Missing', is_([]), 
 								'TotalBroken', 0,
 								'TotalMissing', 0) )
+		
+	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+	def test_reindex(self):
+		username = 'ichigo@bleach.com'
+		with mock_dataserver.mock_db_trans(self.ds):
+			ichigo = self._create_user(username=username)
+			note = self._create_note(u'As Nodt Fear', ichigo.username)
+			ichigo.addContainedObject(note)
+
+		testapp = TestApp(self.app)
+		res = testapp.post('/dataserver2/metadata/reindex',
+							json.dumps({'all': True,
+										'system':True}),
+					 		extra_environ=self._make_extra_environ(),
+					 		status=200)
+		
+		assert_that(res.json_body, 
+					has_entries('MimeTypeCount', has_entry('application/vnd.nextthought.note', 1),
+								'Elapsed', is_not(none()), 
+								'Total', 1) )
