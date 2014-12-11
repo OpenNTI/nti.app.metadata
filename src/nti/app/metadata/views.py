@@ -238,8 +238,11 @@ class CheckIndicesView(AbstractAuthenticatedView,
 					broken[uid] = str(type(obj))
 				except (AttributeError):
 					pass
+
 		for index in catalog.values():
-			if IIndexValues.providedBy(index) or IKeywordIndex.providedBy(index):
+			if IIndexValues.providedBy(index):
+				_process_ids(list(index.ids()))
+			elif IKeywordIndex.providedBy(index):
 				_process_ids(list(index.ids()))
 			elif isinstance(index, TopicIndex):
 				for filter_index in index._filters.values():
