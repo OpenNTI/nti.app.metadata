@@ -16,6 +16,7 @@ import zope.intid
 
 from zope import component
 from zope.security.management import system_user
+from zope.mimetype.interfaces import IContentTypeAware
 
 from ZODB.POSException import POSError
 
@@ -32,6 +33,7 @@ from nti.metadata.reactor import process_queue
 from nti.metadata import get_principal_metadata_objects_intids
 
 def get_mimeType(obj):
+	obj = IContentTypeAware(obj, obj)
 	result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
 	return result or 'unknown'
 
