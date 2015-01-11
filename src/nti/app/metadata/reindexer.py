@@ -121,15 +121,12 @@ PP_APP = PluginPoint('nti.app')
 PP_APP_SITES = PluginPoint('nti.app.sites')
 PP_APP_PRODUCTS = PluginPoint('nti.app.products')
 
-def _create_context(env_dir, devmode=False):
+def _create_context(env_dir):
 	etc = os.getenv('DATASERVER_ETC_DIR') or os.path.join(env_dir, 'etc')
 	etc = os.path.expanduser(etc)
 
 	context = config.ConfigurationMachine()
 	xmlconfig.registerCommonDirectives(context)
-
-	if devmode:
-		context.provideFeature("devmode")
 		
 	slugs = os.path.join(etc, 'package-includes')
 	if os.path.exists(slugs) and os.path.isdir(slugs):
