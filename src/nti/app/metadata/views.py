@@ -40,8 +40,8 @@ from nti.externalization.externalization import to_external_object
 from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.metadata import metadata_queue
-from nti.metadata import metadata_catalog
 from nti.metadata.reactor import process_queue
+from nti.metadata import dataserver_metadata_catalog
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.utils.maps import CaseInsensitiveDict
@@ -215,7 +215,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
 	def __call__(self):
-		catalog = metadata_catalog()
+		catalog = dataserver_metadata_catalog()
 		intids = component.getUtility(zope.intid.IIntIds)
 		result = LocatedExternalDict()
 		broken = result['Broken'] = {}
