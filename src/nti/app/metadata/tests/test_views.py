@@ -10,11 +10,16 @@ __docformat__ = "restructuredtext en"
 from hamcrest import is_
 from hamcrest import none
 from hamcrest import is_not
+from hamcrest import has_value
 from hamcrest import has_entry
 from hamcrest import assert_that
 from hamcrest import has_entries
 
 import json
+
+from zope import interface
+
+from ZODB.interfaces import IBroken
 
 from nti.contentfragments.interfaces import IPlainTextContentFragment
 
@@ -82,6 +87,10 @@ class TestAdminViews(ApplicationLayerTest):
 			ichigo = self._create_user(username=username)
 			note = self._create_note(u'As Nodt Fear', ichigo.username)
 			ichigo.addContainedObject(note)
+			
+			note = self._create_note(u'Broken', ichigo.username)
+			ichigo.addContainedObject(note)
+			interface.alsoProvides(note, IBroken)
 
 		testapp = TestApp(self.app)
 		res = testapp.post('/dataserver2/metadata/check_indices',
@@ -89,9 +98,9 @@ class TestAdminViews(ApplicationLayerTest):
 					 		status=200)
 		
 		assert_that(res.json_body, 
-					has_entries('Broken', is_({}),
+					has_entries('Broken', has_value(u"<class 'nti.dataserver.contenttypes.note.Note'>"),
 								'Missing', is_([]), 
-								'TotalBroken', 0,
+								'TotalBroken', 1,
 								'TotalMissing', 0) )
 		
 	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)

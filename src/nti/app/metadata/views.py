@@ -40,10 +40,11 @@ from nti.externalization.externalization import to_external_object
 from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.metadata import metadata_queue
+from nti.metadata import metadata_catalogs
 from nti.metadata.reactor import process_queue
-from nti.metadata import dataserver_metadata_catalog
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
+from nti.utils.property import Lazy
 from nti.utils.maps import CaseInsensitiveDict
 
 from nti.zope_catalog.topic import ExtentFilteredSet
@@ -214,40 +215,53 @@ class SyncQueueView(AbstractAuthenticatedView,
 class CheckIndicesView(AbstractAuthenticatedView, 
 					   ModeledContentUploadRequestUtilsMixin):
 
+	@Lazy
+	def intids(self):
+		return  component.getUtility(zope.intid.IIntIds)
+	
+	def _unindex(self, catalogs, docid):
+		for catalog in catalogs:
+			catalog.unindex_doc(docid)
+
+	def _process_ids(self, catalogs, docids, missing, broken):
+		intids = self.intids
+		for uid in docids:
+			try:
+				obj = intids.queryObject(uid)
+				if obj is None:
+					self._unindex(catalogs, uid)
+					missing.add(uid)
+				elif IBroken.providedBy(obj):
+					self._unindex(catalogs, uid)
+					broken[uid] = str(type(obj))
+				elif hasattr(obj, '_p_activate'):
+					obj._p_activate()
+			except (TypeError, POSError):
+				self._unindex(catalogs, uid)
+				broken[uid] = str(type(obj))
+			except (AttributeError):
+				pass
+	
 	def __call__(self):
-		catalog = dataserver_metadata_catalog()
-		intids = component.getUtility(zope.intid.IIntIds)
 		result = LocatedExternalDict()
 		broken = result['Broken'] = {}
 		missing = result['Missing'] = set()
 		
-		def _process_ids(ids):
-			for uid in ids:
-				try:
-					obj = intids.queryObject(uid)
-					if obj is None:
-						catalog.unindex_doc(uid)
-						missing.add(uid)
-					elif IBroken.providedBy(obj):
-						catalog.unindex_doc(uid)
-						broken[uid] = str(type(obj))
-					elif hasattr(obj, '_p_activate'):
-						obj._p_activate()
-				except (TypeError, POSError):
-					catalog.unindex_doc(uid)
-					broken[uid] = str(type(obj))
-				except (AttributeError):
-					pass
-
-		for index in catalog.values():
-			if IIndexValues.providedBy(index):
-				_process_ids(list(index.ids()))
-			elif IKeywordIndex.providedBy(index):
-				_process_ids(list(index.ids()))
-			elif isinstance(index, TopicIndex):
-				for filter_index in index._filters.values():
-					if isinstance(filter_index, ExtentFilteredSet):
-						_process_ids(filter_index.ids())
+		catalogs = metadata_catalogs()
+		for catalog in catalogs:
+			for index in catalog.values():
+				if IIndexValues.providedBy(index):
+					docids = list(index.ids())
+					self._process_ids(catalogs, docids, missing, broken)
+				elif IKeywordIndex.providedBy(index):
+					docids = list(index.ids())
+					self._process_ids(catalogs, docids, missing, broken)
+				elif isinstance(index, TopicIndex):
+					for filter_index in index._filters.values():
+						if not isinstance(filter_index, ExtentFilteredSet):
+							continue
+						docids = list(filter_index.ids())
+						self._process_ids(catalogs, docids, missing, broken)
 				
 		result['Missing'] = list(missing)	
 		result['TotalBroken'] = len(broken)
