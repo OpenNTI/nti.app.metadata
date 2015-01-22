@@ -16,11 +16,15 @@ import zope.intid
 
 from zope import component
 from zope import interface
-from zope.index.topic import TopicIndex
-from zope.container.contained import Contained
-from zope.traversing.interfaces import IPathAdapter
 
 from zc.catalog.interfaces import IIndexValues
+
+from zope.container.contained import Contained
+
+from zope.index.topic import TopicIndex
+from zope.index.topic.interfaces import ITopicFilteredSet
+
+from zope.traversing.interfaces import IPathAdapter
 
 from ZODB.interfaces import IBroken
 from ZODB.POSException import POSError
@@ -47,7 +51,6 @@ from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 from nti.utils.property import Lazy
 from nti.utils.maps import CaseInsensitiveDict
 
-from nti.zope_catalog.topic import ExtentFilteredSet
 from nti.zope_catalog.interfaces import IKeywordIndex
 
 from .reindexer import reindex
@@ -258,11 +261,10 @@ class CheckIndicesView(AbstractAuthenticatedView,
 					self._process_ids(catalogs, docids, missing, broken)
 				elif isinstance(index, TopicIndex):
 					for filter_index in index._filters.values():
-						if not isinstance(filter_index, ExtentFilteredSet):
-							continue
-						docids = list(filter_index.ids())
-						self._process_ids(catalogs, docids, missing, broken)
-				
+						if isinstance(filter_index, ITopicFilteredSet):
+							docids = list(filter_index.getIds())
+							self._process_ids(catalogs, docids, missing, broken)
+
 		result['Missing'] = list(missing)	
 		result['TotalBroken'] = len(broken)
 		result['TotalMissing'] = len(missing)
