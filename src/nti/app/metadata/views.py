@@ -17,6 +17,7 @@ import zope.intid
 from zope import component
 from zope import interface
 
+from zc.catalog.interfaces import IValueIndex
 from zc.catalog.interfaces import IIndexValues
 
 from zope.container.contained import Contained
@@ -38,8 +39,10 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
+from nti.dataserver.metadata_index import IX_MIMETYPE
 
 from nti.externalization.interfaces import LocatedExternalDict
+from nti.externalization.interfaces import StandardExternalFields
 from nti.externalization.externalization import to_external_object
 from nti.externalization.externalization import NonExternalizableObjectError
 
@@ -54,6 +57,8 @@ from nti.utils.maps import CaseInsensitiveDict
 from nti.zope_catalog.interfaces import IKeywordIndex
 
 from .reindexer import reindex
+
+ITEMS = StandardExternalFields.ITEMS
 
 @interface.implementer(IPathAdapter)
 class MetadataPathAdapter(Contained):
@@ -81,11 +86,35 @@ def username_search(search_term):
 	return usernames
 
 @view_config(route_name='objects.generic.traversal',
+			 name='mime_types',
+			 renderer='rest',
+			 request_method='GET',
+			 context=MetadataPathAdapter,
+			 permission=nauth.ACT_NTI_ADMIN)
+class GetMimeTypesView(AbstractAuthenticatedView):
+	
+	def __call__(self):
+		mime_types = set()
+		catalogs = metadata_catalogs()
+		for catalog in catalogs:
+			if not IX_MIMETYPE in catalog:
+				continue
+			index = catalog[IX_MIMETYPE]
+			if not IValueIndex.providedBy(index):
+				continue
+			mime_types.update(index.values_to_documents.keys())
+			
+		result = LocatedExternalDict()
+		items = result[ITEMS] = sorted(mime_types)
+		result['Total'] = len(items)
+		return result
+	
+@view_config(route_name='objects.generic.traversal',
 			 name='reindex',
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_NTI_ADMIN)
 class ReindexView(AbstractAuthenticatedView, 
 				  ModeledContentUploadRequestUtilsMixin):
 	
@@ -139,7 +168,7 @@ class ReindexView(AbstractAuthenticatedView,
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_NTI_ADMIN)
 class ProcessQueueView(AbstractAuthenticatedView, 
 					   ModeledContentUploadRequestUtilsMixin):
 
@@ -171,14 +200,14 @@ class ProcessQueueView(AbstractAuthenticatedView,
 			 renderer='rest',
 			 request_method='GET',
 			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_NTI_ADMIN)
 class QueuedObjectsView(AbstractAuthenticatedView):
 	
 	def __call__(self):
 		intids = component.getUtility(zope.intid.IIntIds)
 		catalog_queue = metadata_queue()
 		result = LocatedExternalDict()
-		items = result['Items'] = {}
+		items = result[ITEMS] = {}
 		for key in catalog_queue.keys():
 			try:
 				obj = intids.queryObject(key)
@@ -199,7 +228,7 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_NTI_ADMIN)
 class SyncQueueView(AbstractAuthenticatedView, 
 					ModeledContentUploadRequestUtilsMixin):
 	
@@ -214,7 +243,7 @@ class SyncQueueView(AbstractAuthenticatedView,
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_MODERATE)
+			 permission=nauth.ACT_NTI_ADMIN)
 class CheckIndicesView(AbstractAuthenticatedView, 
 					   ModeledContentUploadRequestUtilsMixin):
 
