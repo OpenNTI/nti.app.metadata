@@ -28,35 +28,38 @@ from nti.dataserver.users import User
 
 from nti.externalization.interfaces import LocatedExternalDict
 
+from nti.metadata import get_iid
 from nti.metadata import metadata_queue
-from nti.metadata.reactor import process_queue
-from nti.metadata import get_principal_metadata_objects_intids
+from nti.metadata import get_principal_metadata_objects
 
-def get_mimeType(obj):
+from nti.metadata.reactor import process_queue
+
+def get_mime_type(obj):
 	obj = IContentTypeAware(obj, obj)
 	result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
 	return result or 'unknown'
 
-def reindex_principal(principal, accept=(), queue=None, intids=None, mimeTypeCount=None):
+def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
 	result = 0
-	mimeTypeCount = defaultdict(int) if mimeTypeCount is None else mimeTypeCount
 	queue = metadata_queue() if queue is None else queue
+	mt_count = defaultdict(int) if mt_count is None else mt_count
 	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
-	for iid in get_principal_metadata_objects_intids(principal):
+	for obj in get_principal_metadata_objects(principal):
 		try:
-			obj = intids.queryObject(iid)
-			mimeType = get_mimeType(obj)
-			if accept and mimeType not in accept:
+			mime_type = get_mime_type(obj)
+			if accept and mime_type not in accept:
 				continue
-			queue.add(iid)
+			iid = get_iid(obj, intids=intids)
+			if iid is not None:
+				queue.add(iid)
 		except TypeError:
 			pass
 		except POSError:
 			logger.error("ignoring broken object %s", iid)
 		else:
 			result += 1
-			mimeTypeCount[mimeType] = mimeTypeCount[mimeType] + 1 
-	return result, mimeTypeCount
+			mt_count[mime_type] = mt_count[mime_type] + 1 
+	return result, mt_count
 
 def reindex(usernames=(), all_users=False, system=False, accept=(), 
 			queue_limit=None, intids=None):
@@ -68,7 +71,7 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 	total = 0
 	now = time.time()
 	queue = metadata_queue()
-	mimeTypeCount = defaultdict(int)
+	mt_count = defaultdict(int)
 	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
 	
 	for username in usernames or ():
@@ -76,12 +79,12 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 		if user is None or not IUser.providedBy(user):
 			continue
 		count, _ = reindex_principal(user, accept, queue=queue, intids=intids,
-									 mimeTypeCount=mimeTypeCount)
+									 mt_count=mt_count)
 		total += count
 
 	if system:
 		count, _ = reindex_principal(system_user(), accept, queue=queue, intids=intids,
-									 mimeTypeCount=mimeTypeCount)
+									 mt_count=mt_count)
 		total += count
 		
 	if queue_limit is not None:
@@ -91,7 +94,7 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 	result = LocatedExternalDict()
 	result['Total'] = total
 	result['Elapsed'] = elapsed
-	result['MimeTypeCount'] = dict(mimeTypeCount)
+	result['MimeTypeCount'] = dict(mt_count)
 	
 	logger.info("%s object(s) processed in %s(s)", total, elapsed)
 	return result
