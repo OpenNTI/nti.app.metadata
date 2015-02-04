@@ -36,6 +36,9 @@ from pyramid import httpexceptions as hexc
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.common.property import Lazy
+from nti.common.maps import CaseInsensitiveDict
+
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
@@ -50,9 +53,6 @@ from nti.metadata import metadata_queue
 from nti.metadata import metadata_catalogs
 from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
-
-from nti.utils.property import Lazy
-from nti.utils.maps import CaseInsensitiveDict
 
 from nti.zope_catalog.interfaces import IKeywordIndex
 
