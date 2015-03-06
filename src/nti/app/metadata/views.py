@@ -129,7 +129,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 	
 	def __call__(self):
 		values = self.readInput()
-		username = values.get('usernames') or values.get('username')
+		username = values.get('user') or values.get('username')
 		system = is_true(values.get('system') or values.get('systemUser'))
 		if system:
 			principal = system_user()
