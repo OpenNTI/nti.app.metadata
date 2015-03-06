@@ -16,6 +16,7 @@ import zope.intid
 
 from zope import component
 from zope import interface
+from zope.security.management import system_user
 
 from zc.catalog.interfaces import IValueIndex
 from zc.catalog.interfaces import IIndexValues
@@ -39,6 +40,7 @@ from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtils
 from nti.common.property import Lazy
 from nti.common.maps import CaseInsensitiveDict
 
+from nti.dataserver.users import User
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
@@ -58,7 +60,10 @@ from nti.zope_catalog.interfaces import IKeywordIndex
 
 from .reindexer import reindex
 
+from . import find_principal_metadata_objects
+
 ITEMS = StandardExternalFields.ITEMS
+MIMETYPE = StandardExternalFields.MIMETYPE
 
 @interface.implementer(IPathAdapter)
 class MetadataPathAdapter(Contained):
@@ -109,6 +114,51 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 		result['Total'] = len(items)
 		return result
 	
+@view_config(route_name='objects.generic.traversal',
+			 name='get_metadata_objects',
+			 renderer='rest',
+			 request_method='GET',
+			 context=MetadataPathAdapter,
+			 permission=nauth.ACT_NTI_ADMIN)
+class GetMetadataObjectsView(AbstractAuthenticatedView):
+	
+	def readInput(self, value=None):
+		result = CaseInsensitiveDict(self.request.params)
+		return result
+	
+	def _do_call(self):
+		values = self.readInput()
+		username = values.get('usernames') or values.get('username')
+		system = is_true(values.get('system') or values.get('systemUser'))
+		if system:
+			principal = system_user()
+		elif username:
+			principal = User.get_user(username)
+		else:
+			raise hexc.HTTPUnprocessableEntity('Must specify a principal')
+		
+		if principal is None:
+			raise hexc.HTTPUnprocessableEntity('Cannot find the specified user')
+		
+		accept = values.get('accept') or values.get('mimeTypes') or u''
+		accept = set(accept.split(',')) if accept else ()
+		if accept and '*/*' not in accept:
+			accept = set(accept)
+		else:
+			accept = ()
+	
+		result = LocatedExternalDict()
+		items = result[ITEMS] = {}
+		for iid, mimeType, obj in find_principal_metadata_objects(principal, accept):
+			try:
+				ext_obj = to_external_object(obj)
+				items[iid] = ext_obj
+			except Exception:
+				items[iid] = {	'Class':'NonExternalizableObject', 
+								'InternalType': str(type(obj)),
+								'MIMETYPE': mimeType   }
+		return result
+
 @view_config(route_name='objects.generic.traversal',
 			 name='reindex',
 			 renderer='rest',
