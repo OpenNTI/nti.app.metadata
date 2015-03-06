@@ -63,6 +63,7 @@ from .reindexer import reindex
 from . import find_principal_metadata_objects
 
 ITEMS = StandardExternalFields.ITEMS
+LINKS = StandardExternalFields.LINKS
 MIMETYPE = StandardExternalFields.MIMETYPE
 
 @interface.implementer(IPathAdapter)
@@ -126,7 +127,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 		result = CaseInsensitiveDict(self.request.params)
 		return result
 	
-	def _do_call(self):
+	def __call__(self):
 		values = self.readInput()
 		username = values.get('usernames') or values.get('username')
 		system = is_true(values.get('system') or values.get('systemUser'))
@@ -152,6 +153,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 		for iid, mimeType, obj in find_principal_metadata_objects(principal, accept):
 			try:
 				ext_obj = to_external_object(obj)
+				ext_obj.pop(LINKS, None)
 				items[iid] = ext_obj
 			except Exception:
 				items[iid] = {	'Class':'NonExternalizableObject', 
