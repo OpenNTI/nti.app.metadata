@@ -16,10 +16,8 @@ import zope.intid
 
 from zope import component
 from zope import interface
-from zope.security.management import system_user
 
-from zc.catalog.interfaces import IValueIndex
-from zc.catalog.interfaces import IIndexValues
+from zope.security.management import system_user
 
 from zope.container.contained import Contained
 
@@ -28,7 +26,9 @@ from zope.index.topic.interfaces import ITopicFilteredSet
 
 from zope.traversing.interfaces import IPathAdapter
 
-from ZODB.interfaces import IBroken
+from zc.catalog.interfaces import IValueIndex
+from zc.catalog.interfaces import IIndexValues
+
 from ZODB.POSException import POSError
 
 from pyramid.view import view_config
@@ -55,6 +55,8 @@ from nti.metadata import metadata_queue
 from nti.metadata import metadata_catalogs
 from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
+
+from nti.zodb import isBroken
 
 from nti.zope_catalog.interfaces import IKeywordIndex
 
@@ -98,7 +100,7 @@ def username_search(search_term):
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
 class GetMimeTypesView(AbstractAuthenticatedView):
-	
+
 	def __call__(self):
 		mime_types = set()
 		catalogs = metadata_catalogs()
@@ -109,12 +111,12 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 			if not IValueIndex.providedBy(index):
 				continue
 			mime_types.update(index.values_to_documents.keys())
-			
+
 		result = LocatedExternalDict()
 		items = result[ITEMS] = sorted(mime_types)
 		result['Total'] = len(items)
 		return result
-	
+
 @view_config(route_name='objects.generic.traversal',
 			 name='get_metadata_objects',
 			 renderer='rest',
@@ -122,11 +124,11 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
 class GetMetadataObjectsView(AbstractAuthenticatedView):
-	
+
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict(self.request.params)
 		return result
-	
+
 	def __call__(self):
 		values = self.readInput()
 		username = values.get('user') or values.get('username')
@@ -137,17 +139,17 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 			principal = User.get_user(username)
 		else:
 			raise hexc.HTTPUnprocessableEntity('Must specify a principal')
-		
+
 		if principal is None:
 			raise hexc.HTTPUnprocessableEntity('Cannot find the specified user')
-		
+
 		accept = values.get('accept') or values.get('mimeTypes') or u''
 		accept = set(accept.split(',')) if accept else ()
 		if accept and '*/*' not in accept:
 			accept = set(accept)
 		else:
 			accept = ()
-	
+
 		result = LocatedExternalDict()
 		items = result[ITEMS] = {}
 		for iid, mimeType, obj in find_principal_metadata_objects(principal, accept):
@@ -156,7 +158,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 				ext_obj.pop(LINKS, None)
 				items[iid] = ext_obj
 			except Exception:
-				items[iid] = {	'Class':'NonExternalizableObject', 
+				items[iid] = {	'Class':'NonExternalizableObject',
 								'InternalType': str(type(obj)),
 								'MIMETYPE': mimeType   }
 		return result
@@ -167,16 +169,16 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
-class ReindexView(AbstractAuthenticatedView, 
+class ReindexView(AbstractAuthenticatedView,
 				  ModeledContentUploadRequestUtilsMixin):
-	
+
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict()
 		if self.request.body:
 			values = super(ReindexView, self).readInput(value=value)
 			result.update(**values)
 		return result
-	
+
 	def _do_call(self):
 		values = self.readInput()
 		queue_limit = values.get('limit', None)
@@ -192,14 +194,14 @@ class ReindexView(AbstractAuthenticatedView,
 			usernames = usernames.split(',')
 		else:
 			usernames = ()
-	
+
 		accept = values.get('accept') or values.get('mimeTypes') or u''
 		accept = set(accept.split(',')) if accept else ()
 		if accept and '*/*' not in accept:
 			accept = set(accept)
 		else:
 			accept = ()
-	
+
 		# queue limit
 		if queue_limit is not None:
 			try:
@@ -207,10 +209,10 @@ class ReindexView(AbstractAuthenticatedView,
 				assert queue_limit > 0 or queue_limit == -1
 			except (ValueError, AssertionError):
 				raise hexc.HTTPUnprocessableEntity('invalid queue size')
-	
-		result = reindex(accept=accept, 
+
+		result = reindex(accept=accept,
 						 usernames=usernames,
-						 system=is_true(system), 
+						 system=is_true(system),
 						 queue_limit=queue_limit,
 						 all_users=is_true(all_users))
 		return result
@@ -221,7 +223,7 @@ class ReindexView(AbstractAuthenticatedView,
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
-class ProcessQueueView(AbstractAuthenticatedView, 
+class ProcessQueueView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
 	def readInput(self):
@@ -230,7 +232,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 			values = super(ProcessQueueView, self).readInput()
 			result = CaseInsensitiveDict(values)
 		return result
-	
+
 	def _do_call(self):
 		values = self.readInput()
 		limit = values.get('limit', DEFAULT_QUEUE_LIMIT)
@@ -239,7 +241,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 			assert limit > 0 or limit == -1
 		except (ValueError, AssertionError):
 			raise hexc.HTTPUnprocessableEntity('invalid limit size')
-	
+
 		now = time.time()
 		total = process_queue(limit=limit)
 		result = LocatedExternalDict()
@@ -254,7 +256,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
 class QueuedObjectsView(AbstractAuthenticatedView):
-	
+
 	def __call__(self):
 		intids = component.getUtility(zope.intid.IIntIds)
 		catalog_queue = metadata_queue()
@@ -271,19 +273,19 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 				items[key] = {	'Message': str(e),
 								'Object': str(type(obj)),
 								'Exception': str(type(e))}
-			
+
 		result['Total'] = len(items)
 		return result
-	
+
 @view_config(route_name='objects.generic.traversal',
 			 name='sync_queue',
 			 renderer='rest',
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
-class SyncQueueView(AbstractAuthenticatedView, 
+class SyncQueueView(AbstractAuthenticatedView,
 					ModeledContentUploadRequestUtilsMixin):
-	
+
 	def __call__(self):
 		catalog_queue = metadata_queue()
 		if catalog_queue.syncQueue():
@@ -296,13 +298,13 @@ class SyncQueueView(AbstractAuthenticatedView,
 			 request_method='POST',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
-class CheckIndicesView(AbstractAuthenticatedView, 
+class CheckIndicesView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
 	@Lazy
 	def intids(self):
 		return  component.getUtility(zope.intid.IIntIds)
-	
+
 	def _unindex(self, catalogs, docid):
 		for catalog in catalogs:
 			catalog.unindex_doc(docid)
@@ -315,22 +317,20 @@ class CheckIndicesView(AbstractAuthenticatedView,
 				if obj is None:
 					self._unindex(catalogs, uid)
 					missing.add(uid)
-				elif IBroken.providedBy(obj):
+				elif isBroken(obj):
 					self._unindex(catalogs, uid)
 					broken[uid] = str(type(obj))
-				elif hasattr(obj, '_p_activate'):
-					obj._p_activate()
 			except (TypeError, POSError):
 				self._unindex(catalogs, uid)
 				broken[uid] = str(type(obj))
 			except (AttributeError):
 				pass
-	
+
 	def __call__(self):
 		result = LocatedExternalDict()
 		broken = result['Broken'] = {}
 		missing = result['Missing'] = set()
-		
+
 		catalogs = metadata_catalogs()
 		for catalog in catalogs:
 			for index in catalog.values():
@@ -346,7 +346,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 							docids = list(filter_index.getIds())
 							self._process_ids(catalogs, docids, missing, broken)
 
-		result['Missing'] = list(missing)	
+		result['Missing'] = list(missing)
 		result['TotalBroken'] = len(broken)
 		result['TotalMissing'] = len(missing)
 		return result
