@@ -17,12 +17,12 @@ import zope.intid
 from zope import component
 from zope import interface
 
-from zope.security.management import system_user
-
 from zope.container.contained import Contained
 
 from zope.index.topic import TopicIndex
 from zope.index.topic.interfaces import ITopicFilteredSet
+
+from zope.security.management import system_user
 
 from zope.traversing.interfaces import IPathAdapter
 

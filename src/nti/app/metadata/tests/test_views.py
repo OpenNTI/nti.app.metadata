@@ -63,7 +63,7 @@ class TestAdminViews(ApplicationLayerTest):
 		testapp.post('/dataserver2/metadata/process_queue',
 					 extra_environ=self._make_extra_environ(),
 					 status=200)
-			
+
 		testapp.post('/dataserver2/metadata/process_queue',
 					 json.dumps({'limit': 'xyt'}),
 					 extra_environ=self._make_extra_environ(),
@@ -81,7 +81,7 @@ class TestAdminViews(ApplicationLayerTest):
 		testapp.post('/dataserver2/metadata/sync_queue',
 					 extra_environ=self._make_extra_environ(),
 					 status=204)
-		
+
 	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
 	def test_check_indices(self):
 		username = 'ichigo@bleach.com'
@@ -89,7 +89,7 @@ class TestAdminViews(ApplicationLayerTest):
 			ichigo = self._create_user(username=username)
 			note = self._create_note(u'As Nodt Fear', ichigo.username)
 			ichigo.addContainedObject(note)
-			
+
 			note = self._create_note(u'Broken', ichigo.username)
 			ichigo.addContainedObject(note)
 			interface.alsoProvides(note, IBroken)
@@ -98,13 +98,13 @@ class TestAdminViews(ApplicationLayerTest):
 		res = testapp.post('/dataserver2/metadata/check_indices',
 					 		extra_environ=self._make_extra_environ(),
 					 		status=200)
-		
-		assert_that(res.json_body, 
+
+		assert_that(res.json_body,
 					has_entries('Broken', has_value(u"<class 'nti.dataserver.contenttypes.note.Note'>"),
-								'Missing', is_([]), 
+								'Missing', is_([]),
 								'TotalBroken', 1,
-								'TotalMissing', 0) )
-		
+								'TotalMissing', 0))
+
 	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
 	def test_mime_types(self):
 		username = 'ichigo@bleach.com'
@@ -117,11 +117,11 @@ class TestAdminViews(ApplicationLayerTest):
 		res = testapp.get('/dataserver2/metadata/mime_types',
 					 	  extra_environ=self._make_extra_environ(),
 					 	  status=200)
-		
-		assert_that(res.json_body, 
+
+		assert_that(res.json_body,
 					has_entries('Items', contains(u"application/vnd.nextthought.note"),
-								'Total', is_(greater_than_or_equal_to(1)) ))
-		
+								'Total', is_(greater_than_or_equal_to(1))))
+
 	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
 	def test_reindex(self):
 		username = 'ichigo@bleach.com'
@@ -136,8 +136,8 @@ class TestAdminViews(ApplicationLayerTest):
 										'system':True}),
 					 		extra_environ=self._make_extra_environ(),
 					 		status=200)
-		
-		assert_that(res.json_body, 
+
+		assert_that(res.json_body,
 					has_entries('MimeTypeCount', has_entry('application/vnd.nextthought.note', 1),
-								'Elapsed', is_not(none()), 
-								'Total', 1) )
+								'Elapsed', is_not(none()),
+								'Total', 1))

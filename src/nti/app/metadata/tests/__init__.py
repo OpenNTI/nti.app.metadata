@@ -9,9 +9,6 @@ __docformat__ = "restructuredtext en"
 
 import unittest
 
-from nti.dataserver.tests.mock_dataserver import WithMockDS
-from nti.dataserver.tests.mock_dataserver import mock_db_trans
-
 from nti.app.testing.application_webtest import ApplicationTestLayer
 
 from nti.testing.layers import find_test
