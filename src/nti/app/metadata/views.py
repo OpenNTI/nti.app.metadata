@@ -12,8 +12,6 @@ logger = __import__('logging').getLogger(__name__)
 import six
 import time
 
-import zope.intid
-
 from zope import component
 from zope import interface
 
@@ -21,6 +19,8 @@ from zope.container.contained import Contained
 
 from zope.index.topic import TopicIndex
 from zope.index.topic.interfaces import ITopicFilteredSet
+
+from zope.intid import IIntIds
 
 from zope.security.management import system_user
 
@@ -37,7 +37,7 @@ from pyramid import httpexceptions as hexc
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.common.property import Lazy
+from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
 
 from nti.dataserver.users import User
@@ -84,7 +84,7 @@ def _make_min_max_btree_range(search_term):
 	return min_inclusive, max_exclusive
 
 def is_true(s):
-	return bool(s and str(s).lower() in ('1', 'true', 't', 'yes', 'y', 'on'))
+	return bool(s and str(s).lower() in TRUE_VALUES)
 
 def username_search(search_term):
 	min_inclusive, max_exclusive = _make_min_max_btree_range(search_term)
@@ -158,9 +158,9 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 				ext_obj.pop(LINKS, None)
 				items[iid] = ext_obj
 			except Exception:
-				items[iid] = {	'Class':'NonExternalizableObject',
-								'InternalType': str(type(obj)),
-								'MIMETYPE': mimeType   }
+				items[iid] = {'Class':'NonExternalizableObject',
+							  'InternalType': str(type(obj)),
+							  'MIMETYPE': mimeType }
 		return result
 
 @view_config(route_name='objects.generic.traversal',
@@ -258,7 +258,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 class QueuedObjectsView(AbstractAuthenticatedView):
 
 	def __call__(self):
-		intids = component.getUtility(zope.intid.IIntIds)
+		intids = component.getUtility(IIntIds)
 		catalog_queue = metadata_queue()
 		result = LocatedExternalDict()
 		items = result[ITEMS] = {}
@@ -268,12 +268,11 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 				if obj is not None:
 					items[key] = to_external_object(obj)
 			except NonExternalizableObjectError:
-				items[key] = { 	'Object': str(type(obj)) }
+				items[key] = {'Object': str(type(obj))}
 			except Exception as e:
-				items[key] = {	'Message': str(e),
-								'Object': str(type(obj)),
-								'Exception': str(type(e))}
-
+				items[key] = {'Message': str(e),
+							  'Object': str(type(obj)),
+							  'Exception': str(type(e))}
 		result['Total'] = len(items)
 		return result
 
@@ -301,9 +300,9 @@ class SyncQueueView(AbstractAuthenticatedView,
 class CheckIndicesView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
-	@Lazy
+	@property
 	def intids(self):
-		return  component.getUtility(zope.intid.IIntIds)
+		return  component.getUtility(IIntIds)
 
 	def _unindex(self, catalogs, docid):
 		for catalog in catalogs:

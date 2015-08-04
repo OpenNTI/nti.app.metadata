@@ -9,9 +9,9 @@ __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
 
-import zope.intid
-
 from zope import component
+
+from zope.intid import IIntIds
 
 from zope.mimetype.interfaces import IContentTypeAware
 
@@ -24,7 +24,7 @@ def get_mime_type(obj, default='unknown'):
 	return result or default
 
 def find_principal_metadata_objects(principal, accept=(), intids=None):
-	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
+	intids = component.getUtility(IIntIds) if intids is None else intids
 	for obj in get_principal_metadata_objects(principal):
 		mime_type = get_mime_type(obj)
 		if accept and mime_type not in accept:

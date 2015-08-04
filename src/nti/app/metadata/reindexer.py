@@ -12,9 +12,9 @@ logger = __import__('logging').getLogger(__name__)
 import time
 from collections import defaultdict
 
-import zope.intid
-
 from zope import component
+
+from zope.intid import IIntIds
 
 from zope.security.management import system_user
 
@@ -36,7 +36,7 @@ def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=No
 	result = 0
 	queue = metadata_queue() if queue is None else queue
 	mt_count = defaultdict(int) if mt_count is None else mt_count
-	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
+	intids = component.getUtility(IIntIds) if intids is None else intids
 	for iid, mimeType, obj in find_principal_metadata_objects(principal, accept, intids):
 		try:
 			iid = get_iid(obj, intids=intids)
@@ -60,7 +60,7 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 	now = time.time()
 	queue = metadata_queue()
 	mt_count = defaultdict(int)
-	intids = component.getUtility(zope.intid.IIntIds) if intids is None else intids
+	intids = component.getUtility(IIntIds) if intids is None else intids
 
 	for username in usernames or ():
 		user = User.get_user(username)
