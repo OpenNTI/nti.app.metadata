@@ -5,6 +5,7 @@
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
+from nti.zope_catalog.catalog import ResultSet
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -37,6 +38,7 @@ from pyramid import httpexceptions as hexc
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.common.property import Lazy
 from nti.common.string import TRUE_VALUES
 from nti.common.maps import CaseInsensitiveDict
 
@@ -44,7 +46,13 @@ from nti.dataserver.users import User
 from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
+
+from nti.dataserver.metadata_index import IX_CREATOR
 from nti.dataserver.metadata_index import IX_MIMETYPE
+from nti.dataserver.metadata_index import IX_SHAREDWITH
+from nti.dataserver.metadata_index import IX_CONTAINERID
+
+from nti.dataserver.sharing import SharingContextCache
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
@@ -356,17 +364,81 @@ class CheckIndicesView(AbstractAuthenticatedView,
 @view_config(route_name='objects.generic.traversal',
 			 name='user_ugd',
 			 renderer='rest',
-			 request_method='POST',
+			 request_method='GET',
 			 context=MetadataPathAdapter,
 			 permission=nauth.ACT_NTI_ADMIN)
 class UGDView(AbstractAuthenticatedView):
+
+	@Lazy
+	def intids(self):
+		return component.getUtility(IIntIds)
+
+	@Lazy
+	def catalog(self):
+		return dataserver_metadata_catalog()
 	
+	def get_owned(self, user, ntiid, mime_types=()):
+		username = user.username
+		query = { IX_CONTAINERID: {'any_of':(ntiid,)},
+				  IX_CREATOR : {'any_of':(username,)}}
+		if mime_types:
+			query[IX_MIMETYPE] = {'any_of':mime_types}
+		result = self.catalog.apply(query)
+		return result
+
+	def get_shared_container(self, user, ntiid, mime_types=()):
+		username = user.username
+		query = { IX_CONTAINERID: {'any_of':(ntiid,)},
+				  IX_SHAREDWITH : {'any_of':(username,)}}
+		if mime_types:
+			query[IX_MIMETYPE] = {'any_of':mime_types}
+		result = self.catalog.apply(query) or self.catalog.family.IF.LFSet()
+		return result
+
+	def get_shared(self, user, ntiid, mime_types=()):
+		# start w/ user
+		result = [self.get_shared_container(user, ntiid, mime_types)]
+		
+		# process communities followed
+		context_cache = SharingContextCache()
+		context_cache._build_entities_followed_for_read(user)
+		persons_following = context_cache.persons_followed
+		communities_seen = context_cache.communities_followed
+		for following in communities_seen:
+			if following == user:
+				continue
+			
+			sink = self.catalog.family.IF.LFSet()
+			uids = self.get_shared_container(following, ntiid, mime_types)
+			for uid, x in ResultSet(uids, self.intids, True).iter_pairs():
+				if not user.is_ignoring_shared_data_from(x.creator):
+					sink.add(uid)
+			result.append(sink)
+				
+		# process other dynamic sharing targets
+		for comm in context_cache(user._get_dynamic_sharing_targets_for_read):
+			if comm in communities_seen:
+				continue
+			
+			sink = self.catalog.family.IF.LFSet()
+			uids = self.get_shared_container(comm, ntiid, mime_types)
+			for x in ResultSet(uids, self.intids, True).iter_pairs():
+				if x.creator in persons_following or x.creator is user:
+					sink.add(uid)
+			result.append(sink)
+
+		result = self.catalog.family.IF.multiunion(result)	
+		return result
+	
+	def get_ids(self, user, ntiid, mime_types=()):
+		owned = self.get_owned(user, ntiid, mime_types)
+		shared = self.get_shared(user, ntiid, mime_types)
+		result = self.catalog.family.IF.union(owned, shared)
+		return result	
+		
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict(self.request.params)
 		return result
-
-	def xx(self):
-		dataserver_metadata_catalog()
 
 	def __call__(self):
 		values = self.readInput()
@@ -377,6 +449,7 @@ class UGDView(AbstractAuthenticatedView):
 		ntiid = values.get('ntiid') or values.get('containerId')
 		if not ntiid:
 			raise hexc.HTTPUnprocessableEntity('Provide a valid container')
-
+		# from IPython.core.debugger import Tracer; Tracer()()
+		self.get_ids(user, ntiid)
 		result = LocatedExternalDict()
 		return result
