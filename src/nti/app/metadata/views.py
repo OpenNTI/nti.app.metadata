@@ -53,7 +53,10 @@ from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.metadata import metadata_queue
 from nti.metadata import metadata_catalogs
+from nti.metadata import dataserver_metadata_catalog
+
 from nti.metadata.reactor import process_queue
+
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.zodb import isBroken
@@ -348,4 +351,32 @@ class CheckIndicesView(AbstractAuthenticatedView,
 		result['Missing'] = list(missing)
 		result['TotalBroken'] = len(broken)
 		result['TotalMissing'] = len(missing)
+		return result
+
+@view_config(route_name='objects.generic.traversal',
+			 name='user_ugd',
+			 renderer='rest',
+			 request_method='POST',
+			 context=MetadataPathAdapter,
+			 permission=nauth.ACT_NTI_ADMIN)
+class UGDView(AbstractAuthenticatedView):
+	
+	def readInput(self, value=None):
+		result = CaseInsensitiveDict(self.request.params)
+		return result
+
+	def xx(self):
+		dataserver_metadata_catalog()
+
+	def __call__(self):
+		values = self.readInput()
+		username = values.get('user') or values.get('username')
+		user = User.get_user(username or '')
+		if user is None:
+			raise hexc.HTTPUnprocessableEntity('Provide a valid user')
+		ntiid = values.get('ntiid') or values.get('containerId')
+		if not ntiid:
+			raise hexc.HTTPUnprocessableEntity('Provide a valid container')
+
+		result = LocatedExternalDict()
 		return result
