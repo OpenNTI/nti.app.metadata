@@ -5,7 +5,6 @@
 """
 
 from __future__ import print_function, unicode_literals, absolute_import, division
-from nti.zope_catalog.catalog import ResultSet
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -69,6 +68,7 @@ from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.zodb import isBroken
 
+from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IKeywordIndex
 
 from .reindexer import reindex
@@ -373,10 +373,20 @@ class UGDView(AbstractAuthenticatedView):
 	def intids(self):
 		return component.getUtility(IIntIds)
 
+	@classmethod
+	def parse_mime_types(cls, value):
+		mime_types = set(value.split(',')) if value else ()
+		if '*/*' in mime_types:
+			mime_types = ()
+		elif mime_types:
+			mime_types = {e.strip().lower() for e in mime_types}
+			mime_types.discard(u'')
+		return tuple(mime_types) if mime_types else ()
+
 	@Lazy
 	def catalog(self):
 		return dataserver_metadata_catalog()
-	
+
 	def get_owned(self, user, ntiid, mime_types=()):
 		username = user.username
 		query = { IX_CONTAINERID: {'any_of':(ntiid,)},
@@ -398,7 +408,7 @@ class UGDView(AbstractAuthenticatedView):
 	def get_shared(self, user, ntiid, mime_types=()):
 		# start w/ user
 		result = [self.get_shared_container(user, ntiid, mime_types)]
-		
+
 		# process communities followed
 		context_cache = SharingContextCache()
 		context_cache._build_entities_followed_for_read(user)
@@ -407,19 +417,19 @@ class UGDView(AbstractAuthenticatedView):
 		for following in communities_seen:
 			if following == user:
 				continue
-			
+
 			sink = self.catalog.family.IF.LFSet()
 			uids = self.get_shared_container(following, ntiid, mime_types)
 			for uid, x in ResultSet(uids, self.intids, True).iter_pairs():
 				if not user.is_ignoring_shared_data_from(x.creator):
 					sink.add(uid)
 			result.append(sink)
-				
+
 		# process other dynamic sharing targets
 		for comm in context_cache(user._get_dynamic_sharing_targets_for_read):
 			if comm in communities_seen:
 				continue
-			
+
 			sink = self.catalog.family.IF.LFSet()
 			uids = self.get_shared_container(comm, ntiid, mime_types)
 			for x in ResultSet(uids, self.intids, True).iter_pairs():
@@ -427,15 +437,15 @@ class UGDView(AbstractAuthenticatedView):
 					sink.add(uid)
 			result.append(sink)
 
-		result = self.catalog.family.IF.multiunion(result)	
+		result = self.catalog.family.IF.multiunion(result)
 		return result
-	
+
 	def get_ids(self, user, ntiid, mime_types=()):
 		owned = self.get_owned(user, ntiid, mime_types)
 		shared = self.get_shared(user, ntiid, mime_types)
 		result = self.catalog.family.IF.union(owned, shared)
-		return result	
-		
+		return result
+
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict(self.request.params)
 		return result
@@ -446,10 +456,15 @@ class UGDView(AbstractAuthenticatedView):
 		user = User.get_user(username or '')
 		if user is None:
 			raise hexc.HTTPUnprocessableEntity('Provide a valid user')
+
 		ntiid = values.get('ntiid') or values.get('containerId')
 		if not ntiid:
 			raise hexc.HTTPUnprocessableEntity('Provide a valid container')
-		# from IPython.core.debugger import Tracer; Tracer()()
-		self.get_ids(user, ntiid)
+
+		mime_types = values.get('mime_types') or values.get('mimeTypes') or u''
+		mime_types = self.parse_mime_types(mime_types)
+
 		result = LocatedExternalDict()
+		uids = self.get_ids(user, ntiid, mime_types)
+		result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
 		return result
