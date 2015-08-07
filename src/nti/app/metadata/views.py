@@ -469,5 +469,6 @@ class UGDView(AbstractAuthenticatedView):
 
 		result = LocatedExternalDict()
 		uids = self.get_ids(user, ntiid, mime_types)
-		result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
+		items = result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
+		result['ItemCount'] = result['Total'] = len(items)
 		return result
