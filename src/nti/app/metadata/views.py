@@ -393,7 +393,7 @@ class UGDView(AbstractAuthenticatedView):
 				  IX_CREATOR : {'any_of':(username,)}}
 		if mime_types:
 			query[IX_MIMETYPE] = {'any_of':mime_types}
-		result = self.catalog.apply(query)
+		result = self.catalog.apply(query) or self.catalog.family.IF.LFSet()
 		return result
 
 	def get_shared_container(self, user, ntiid, mime_types=()):
