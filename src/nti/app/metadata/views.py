@@ -408,6 +408,7 @@ class UGDView(AbstractAuthenticatedView):
 	def get_shared(self, user, ntiid, mime_types=()):
 		# start w/ user
 		result = [self.get_shared_container(user, ntiid, mime_types)]
+		creator_index = self.catalog[IX_CREATOR].index
 
 		# process communities followed
 		context_cache = SharingContextCache()
@@ -420,8 +421,9 @@ class UGDView(AbstractAuthenticatedView):
 
 			sink = self.catalog.family.IF.LFSet()
 			uids = self.get_shared_container(following, ntiid, mime_types)
-			for uid, x in ResultSet(uids, self.intids, True).iter_pairs():
-				if not user.is_ignoring_shared_data_from(x.creator):
+			for uid, username in creator_index.zip(uids):
+				creator = User.get_user(username) if username else None
+				if creator and not user.is_ignoring_shared_data_from(creator):
 					sink.add(uid)
 			result.append(sink)
 
@@ -432,8 +434,9 @@ class UGDView(AbstractAuthenticatedView):
 
 			sink = self.catalog.family.IF.LFSet()
 			uids = self.get_shared_container(comm, ntiid, mime_types)
-			for x in ResultSet(uids, self.intids, True).iter_pairs():
-				if x.creator in persons_following or x.creator is user:
+			for uid, username in creator_index.zip(uids):
+				creator = User.get_user(username) if username else None
+				if creator in persons_following or creator is user:
 					sink.add(uid)
 			result.append(sink)
 
