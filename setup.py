@@ -8,7 +8,7 @@ entry_points = {
 		'target = nti.app',
 	],
     "console_scripts": [
-        "nti_metadata_reindexer = nti.app.metadata.reindexer:main"
+        "nti_metadata_reindexer = nti.app.metadata.scripts.reindexer:main"
     ],
 }
 
