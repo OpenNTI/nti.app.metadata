@@ -11,7 +11,7 @@ logger = __import__('logging').getLogger(__name__)
 
 from zope import component
 
-from zope.intid import IIntIds
+from zope.intid.interfaces import IIntIds
 
 from zope.mimetype.interfaces import IContentTypeAware
 

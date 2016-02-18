@@ -11,12 +11,12 @@ import unittest
 
 from nti.app.testing.application_webtest import ApplicationTestLayer
 
+from nti.dataserver.tests.mock_dataserver import DSInjectorMixin
+
 from nti.testing.layers import find_test
 from nti.testing.layers import GCLayerMixin
 from nti.testing.layers import ZopeComponentLayer
 from nti.testing.layers import ConfiguringLayerMixin
-
-from nti.dataserver.tests.mock_dataserver import DSInjectorMixin
 
 import zope.testing.cleanup
 

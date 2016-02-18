@@ -14,9 +14,11 @@ from collections import defaultdict
 
 from zope import component
 
-from zope.intid import IIntIds
+from zope.intid.interfaces import IIntIds
 
 from zope.security.management import system_user
+
+from nti.app.metadata import find_principal_metadata_objects
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserver
@@ -29,8 +31,6 @@ from nti.externalization.interfaces import LocatedExternalDict
 from nti.metadata import get_iid
 from nti.metadata import metadata_queue
 from nti.metadata.reactor import process_queue
-
-from . import find_principal_metadata_objects
 
 def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
 	result = 0
@@ -49,8 +49,8 @@ def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=No
 			mt_count[mimeType] = mt_count[mimeType] + 1
 	return result, mt_count
 
-def reindex(usernames=(), all_users=False, system=False, accept=(),
-			queue_limit=None, intids=None):
+def reindex(usernames=(), all_users=False, system=False, accept=(), queue_limit=None,
+			intids=None):
 	if all_users:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder
@@ -66,12 +66,18 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 		user = User.get_user(username)
 		if user is None or not IUser.providedBy(user):
 			continue
-		count, _ = reindex_principal(user, accept, queue=queue, intids=intids,
+		count, _ = reindex_principal(user,
+									 accept, 
+									 queue=queue,
+									 intids=intids,
 									 mt_count=mt_count)
 		total += count
 
 	if system:
-		count, _ = reindex_principal(system_user(), accept, queue=queue, intids=intids,
+		count, _ = reindex_principal(system_user(), 
+									 accept, 
+									 queue=queue, 
+									 intids=intids,
 									 mt_count=mt_count)
 		total += count
 

@@ -29,14 +29,14 @@ from nti.dataserver.contenttypes import Note
 
 from nti.ntiids.ntiids import make_ntiid
 
-from nti.appserver.tests.test_application import TestApp
-
-import nti.dataserver.tests.mock_dataserver as mock_dataserver
-
 from nti.app.metadata.tests import MetadataApplicationTestLayer
 
 from nti.app.testing.application_webtest import ApplicationLayerTest
 from nti.app.testing.decorators import WithSharedApplicationMockDSHandleChanges
+
+from nti.appserver.tests.test_application import TestApp
+
+import nti.dataserver.tests.mock_dataserver as mock_dataserver
 
 class TestAdminViews(ApplicationLayerTest):
 

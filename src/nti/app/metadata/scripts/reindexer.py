@@ -13,10 +13,10 @@ import os
 import pprint
 import argparse
 
+from nti.app.metadata.reindexer import reindex
+
 from nti.dataserver.utils import run_with_dataserver
 from nti.dataserver.utils.base_script import create_context
-
-from ..reindexer import reindex
 
 def _process_args(args):
 	result = reindex(all_users=args.all,

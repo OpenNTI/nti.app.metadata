@@ -20,7 +20,7 @@ from zope.container.contained import Contained
 from zope.index.topic import TopicIndex
 from zope.index.topic.interfaces import ITopicFilteredSet
 
-from zope.intid import IIntIds
+from zope.intid.interfaces import IIntIds
 
 from zope.security.management import system_user
 
@@ -31,18 +31,26 @@ from zc.catalog.interfaces import IIndexValues
 
 from ZODB.POSException import POSError
 
-from pyramid.view import view_config
 from pyramid import httpexceptions as hexc
 
+from pyramid.view import view_config
+
 from nti.app.base.abstract_views import AbstractAuthenticatedView
+
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
+from nti.app.metadata import find_principal_metadata_objects
+
+from nti.app.metadata.reindexer import reindex
+
 from nti.common.property import Lazy
-from nti.common.string import TRUE_VALUES
+
 from nti.common.maps import CaseInsensitiveDict
 
-from nti.dataserver.users import User
+from nti.common.string import TRUE_VALUES
+
 from nti.dataserver import authorization as nauth
+
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 
@@ -51,12 +59,15 @@ from nti.dataserver.metadata_index import IX_MIMETYPE
 from nti.dataserver.metadata_index import IX_SHAREDWITH
 from nti.dataserver.metadata_index import IX_CONTAINERID
 
+from nti.dataserver.users import User
+
 from nti.dataserver.sharing import SharingContextCache
+
+from nti.externalization.externalization import to_external_object
+from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
-from nti.externalization.externalization import to_external_object
-from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.metadata import metadata_queue
 from nti.metadata import metadata_catalogs
@@ -70,10 +81,6 @@ from nti.zodb import isBroken
 
 from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IKeywordIndex
-
-from .reindexer import reindex
-
-from . import find_principal_metadata_objects
 
 ITEMS = StandardExternalFields.ITEMS
 LINKS = StandardExternalFields.LINKS
