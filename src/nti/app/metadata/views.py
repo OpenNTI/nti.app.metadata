@@ -321,7 +321,6 @@ class SyncQueueView(AbstractAuthenticatedView,
 @view_config(name='CheckIndices')
 @view_config(name='check_indices')
 @view_defaults(route_name='objects.generic.traversal',
-			   name='check_indices',
 			   renderer='rest',
 			   context=MetadataPathAdapter,
 			   permission=nauth.ACT_NTI_ADMIN)
