@@ -71,7 +71,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 				elif isBroken(obj):
 					_unindex(catalogs, uid)
 					broken[uid] = str(type(obj))
-			except (TypeError, POSError):
+			except (POSError, TypeError):
 				_unindex(catalogs, uid)
 				broken[uid] = str(type(obj))
 			except (AttributeError):
@@ -79,18 +79,22 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 
 	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
 	for catalog in catalogs:
-		for index in catalog.values():
-			if IIndexValues.providedBy(index):
-				docids = list(index.ids())
-				_process_ids(catalogs, docids, missing, broken, seen)
-			elif IKeywordIndex.providedBy(index):
-				docids = list(index.ids())
-				_process_ids(catalogs, docids, missing, broken, seen)
-			elif isinstance(index, TopicIndex):
-				for filter_index in index._filters.values():
-					if isinstance(filter_index, ITopicFilteredSet):
-						docids = list(filter_index.getIds())
-						_process_ids(catalogs, docids, missing, broken, seen)
+		for name, index in catalog.items():
+			try:
+				if IIndexValues.providedBy(index):
+					docids = list(index.ids())
+					_process_ids(catalogs, docids, missing, broken, seen)
+				elif IKeywordIndex.providedBy(index):
+					docids = list(index.ids())
+					_process_ids(catalogs, docids, missing, broken, seen)
+				elif isinstance(index, TopicIndex):
+					for filter_index in index._filters.values():
+						if isinstance(filter_index, ITopicFilteredSet):
+							docids = list(filter_index.getIds())
+							_process_ids(catalogs, docids, missing, broken, seen)
+			except (POSError, TypeError):
+				logger.error("Errors getting ids from index %s(%s) in catalog %s", 
+							name, index, catalog)
 
 	result['Missing'] = list(missing)
 	result['TotalIndexed'] = len(seen)
