@@ -93,6 +93,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 						_process_ids(catalogs, docids, missing, broken, seen)
 
 	result['Missing'] = list(missing)
+	result['TotalIndexed'] = len(seen)
 	result['TotalBroken'] = len(broken)
 	result['TotalMissing'] = len(missing)
 	return result
