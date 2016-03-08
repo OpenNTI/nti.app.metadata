@@ -30,6 +30,7 @@ from nti.externalization.interfaces import LocatedExternalDict
 
 from nti.metadata import get_iid
 from nti.metadata import metadata_queue
+
 from nti.metadata.reactor import process_queue
 
 def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
@@ -49,8 +50,8 @@ def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=No
 			mt_count[mimeType] = mt_count[mimeType] + 1
 	return result, mt_count
 
-def reindex(usernames=(), all_users=False, system=False, accept=(), queue_limit=None,
-			intids=None):
+def reindex(usernames=(), all_users=False, system=False, accept=(),
+			queue_limit=None, intids=None):
 	if all_users:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder

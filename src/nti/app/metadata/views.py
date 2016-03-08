@@ -34,6 +34,7 @@ from ZODB.POSException import POSError
 from pyramid import httpexceptions as hexc
 
 from pyramid.view import view_config
+from pyramid.view import view_defaults
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
@@ -111,12 +112,14 @@ def username_search(search_term):
 	usernames = list(users.iterkeys(min_inclusive, max_exclusive, excludemax=True))
 	return usernames
 
-@view_config(route_name='objects.generic.traversal',
-			 name='mime_types',
-			 renderer='rest',
-			 request_method='GET',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='MimeTypes')
+@view_config(name='mime_types')
+@view_defaults(route_name='objects.generic.traversal',
+			   name='mime_types',
+			   renderer='rest',
+			   request_method='GET',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class GetMimeTypesView(AbstractAuthenticatedView):
 
 	def __call__(self):
@@ -132,15 +135,16 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 
 		result = LocatedExternalDict()
 		items = result[ITEMS] = sorted(mime_types)
-		result['Total'] = len(items)
+		result['ItemCount'] = result['Total'] = len(items)
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='get_metadata_objects',
-			 renderer='rest',
-			 request_method='GET',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='GetMetadataObjects')
+@view_config(name='get_metadata_objects')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='GET',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class GetMetadataObjectsView(AbstractAuthenticatedView):
 
 	def readInput(self, value=None):
@@ -179,14 +183,16 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 				items[iid] = {'Class':'NonExternalizableObject',
 							  'InternalType': str(type(obj)),
 							  'MIMETYPE': mimeType }
+		result['ItemCount'] = result['Total'] = len(items)
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='reindex',
-			 renderer='rest',
-			 request_method='POST',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='ReIndex')
+@view_config(name='reindex')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='POST',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class ReindexView(AbstractAuthenticatedView,
 				  ModeledContentUploadRequestUtilsMixin):
 
@@ -235,12 +241,13 @@ class ReindexView(AbstractAuthenticatedView,
 						 all_users=is_true(all_users))
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='process_queue',
-			 renderer='rest',
-			 request_method='POST',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='ProcessQueue')
+@view_config(name='process_queue')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='POST',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class ProcessQueueView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
@@ -267,12 +274,13 @@ class ProcessQueueView(AbstractAuthenticatedView,
 		result['Total'] = total
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='queued_objects',
-			 renderer='rest',
-			 request_method='GET',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='QueuedObjects')
+@view_config(name='queued_objects')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='GET',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class QueuedObjectsView(AbstractAuthenticatedView):
 
 	def __call__(self):
@@ -280,7 +288,7 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 		catalog_queue = metadata_queue()
 		result = LocatedExternalDict()
 		items = result[ITEMS] = {}
-		for key in catalog_queue.keys():
+		for key in list(catalog_queue.keys()):
 			try:
 				obj = intids.queryObject(key)
 				if obj is not None:
@@ -291,15 +299,16 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 				items[key] = {'Message': str(e),
 							  'Object': str(type(obj)),
 							  'Exception': str(type(e))}
-		result['Total'] = len(items)
+		result['ItemCount'] = result['Total'] = len(items)
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='sync_queue',
-			 renderer='rest',
-			 request_method='POST',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='SyncQueue')
+@view_config(name='sync_queue')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='POST',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class SyncQueueView(AbstractAuthenticatedView,
 					ModeledContentUploadRequestUtilsMixin):
 
@@ -309,12 +318,13 @@ class SyncQueueView(AbstractAuthenticatedView,
 			logger.info("Queue synched")
 		return hexc.HTTPNoContent()
 
-@view_config(route_name='objects.generic.traversal',
-			 name='check_indices',
-			 renderer='rest',
-			 request_method='POST',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='CheckIndices')
+@view_config(name='check_indices')
+@view_defaults(route_name='objects.generic.traversal',
+			   name='check_indices',
+			   renderer='rest',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class CheckIndicesView(AbstractAuthenticatedView,
 					   ModeledContentUploadRequestUtilsMixin):
 
@@ -368,12 +378,13 @@ class CheckIndicesView(AbstractAuthenticatedView,
 		result['TotalMissing'] = len(missing)
 		return result
 
-@view_config(route_name='objects.generic.traversal',
-			 name='user_ugd',
-			 renderer='rest',
-			 request_method='GET',
-			 context=MetadataPathAdapter,
-			 permission=nauth.ACT_NTI_ADMIN)
+@view_config(name='UserUGD')
+@view_config(name='user_ugd')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='GET',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
 class UGDView(AbstractAuthenticatedView):
 
 	@Lazy
