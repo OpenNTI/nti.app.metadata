@@ -11,12 +11,26 @@ logger = __import__('logging').getLogger(__name__)
 
 from zope import component
 
+from zope.index.topic import TopicIndex
+from zope.index.topic.interfaces import ITopicFilteredSet
+
 from zope.intid.interfaces import IIntIds
+
+from zc.catalog.interfaces import IIndexValues
 
 from zope.mimetype.interfaces import IContentTypeAware
 
+from ZODB.POSException import POSError
+
+from nti.externalization.interfaces import LocatedExternalDict
+
 from nti.metadata import get_iid
 from nti.metadata import get_principal_metadata_objects
+
+from nti.zope_catalog.catalog import isBroken
+
+from nti.zope_catalog.interfaces import IKeywordIndex
+from nti.zope_catalog.interfaces import IMetadataCatalog
 
 def get_mime_type(obj, default='unknown'):
 	obj = IContentTypeAware(obj, obj)
@@ -32,3 +46,53 @@ def find_principal_metadata_objects(principal, accept=(), intids=None):
 		iid = get_iid(obj, intids=intids)
 		if iid is not None:
 			yield iid, mime_type, obj
+
+def check_indices(catalog_interface=IMetadataCatalog, intids=None):
+	seen = set()
+	result = LocatedExternalDict()
+	broken = result['Broken'] = {}
+	missing = result['Missing'] = set()	
+	intids = component.getUtility(IIntIds) if intids is None else intids
+
+	def _unindex(catalogs, docid):
+		for catalog in catalogs:
+			catalog.unindex_doc(docid)
+
+	def _process_ids(catalogs, docids, missing, broken, seen):
+		for uid in docids:
+			if uid in seen:
+				continue
+			seen.add(uid)
+			try:
+				obj = intids.queryObject(uid)
+				if obj is None:
+					_unindex(catalogs, uid)
+					missing.add(uid)
+				elif isBroken(obj):
+					_unindex(catalogs, uid)
+					broken[uid] = str(type(obj))
+			except (TypeError, POSError):
+				_unindex(catalogs, uid)
+				broken[uid] = str(type(obj))
+			except (AttributeError):
+				pass
+
+	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
+	for catalog in catalogs:
+		for index in catalog.values():
+			if IIndexValues.providedBy(index):
+				docids = list(index.ids())
+				_process_ids(catalogs, docids, missing, broken, seen)
+			elif IKeywordIndex.providedBy(index):
+				docids = list(index.ids())
+				_process_ids(catalogs, docids, missing, broken, seen)
+			elif isinstance(index, TopicIndex):
+				for filter_index in index._filters.values():
+					if isinstance(filter_index, ITopicFilteredSet):
+						docids = list(filter_index.getIds())
+						_process_ids(catalogs, docids, missing, broken, seen)
+
+	result['Missing'] = list(missing)
+	result['TotalBroken'] = len(broken)
+	result['TotalMissing'] = len(missing)
+	return result

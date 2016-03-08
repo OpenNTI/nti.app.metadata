@@ -17,9 +17,6 @@ from zope import interface
 
 from zope.container.contained import Contained
 
-from zope.index.topic import TopicIndex
-from zope.index.topic.interfaces import ITopicFilteredSet
-
 from zope.intid.interfaces import IIntIds
 
 from zope.security.management import system_user
@@ -27,9 +24,6 @@ from zope.security.management import system_user
 from zope.traversing.interfaces import IPathAdapter
 
 from zc.catalog.interfaces import IValueIndex
-from zc.catalog.interfaces import IIndexValues
-
-from ZODB.POSException import POSError
 
 from pyramid import httpexceptions as hexc
 
@@ -40,7 +34,8 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.app.metadata import find_principal_metadata_objects
+from nti.app.metadata.utils import check_indices
+from nti.app.metadata.utils import find_principal_metadata_objects
 
 from nti.app.metadata.reindexer import reindex
 
@@ -78,10 +73,7 @@ from nti.metadata.reactor import process_queue
 
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
-from nti.zodb import isBroken
-
 from nti.zope_catalog.catalog import ResultSet
-from nti.zope_catalog.interfaces import IKeywordIndex
 
 ITEMS = StandardExternalFields.ITEMS
 LINKS = StandardExternalFields.LINKS
@@ -331,54 +323,8 @@ class CheckIndicesView(AbstractAuthenticatedView,
 	def intids(self):
 		return  component.getUtility(IIntIds)
 
-	def _unindex(self, catalogs, docid):
-		for catalog in catalogs:
-			catalog.unindex_doc(docid)
-
-	def _process_ids(self, catalogs, docids, missing, broken, seen):
-		intids = self.intids
-		for uid in docids:
-			if uid in seen:
-				continue
-			seen.add(uid)
-			try:
-				obj = intids.queryObject(uid)
-				if obj is None:
-					self._unindex(catalogs, uid)
-					missing.add(uid)
-				elif isBroken(obj):
-					self._unindex(catalogs, uid)
-					broken[uid] = str(type(obj))
-			except (TypeError, POSError):
-				self._unindex(catalogs, uid)
-				broken[uid] = str(type(obj))
-			except (AttributeError):
-				pass
-
 	def __call__(self):
-		seen = set()
-		result = LocatedExternalDict()
-		broken = result['Broken'] = {}
-		missing = result['Missing'] = set()
-
-		catalogs = metadata_catalogs()
-		for catalog in catalogs:
-			for index in catalog.values():
-				if IIndexValues.providedBy(index):
-					docids = list(index.ids())
-					self._process_ids(catalogs, docids, missing, broken, seen)
-				elif IKeywordIndex.providedBy(index):
-					docids = list(index.ids())
-					self._process_ids(catalogs, docids, missing, broken, seen)
-				elif isinstance(index, TopicIndex):
-					for filter_index in index._filters.values():
-						if isinstance(filter_index, ITopicFilteredSet):
-							docids = list(filter_index.getIds())
-							self._process_ids(catalogs, docids, missing, broken, seen)
-
-		result['Missing'] = list(missing)
-		result['TotalBroken'] = len(broken)
-		result['TotalMissing'] = len(missing)
+		result = check_indices(intids=self.intids)
 		return result
 
 @view_config(name='UserUGD')
