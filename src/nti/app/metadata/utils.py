@@ -93,7 +93,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 							docids = list(filter_index.getIds())
 							_process_ids(catalogs, docids, missing, broken, seen)
 			except (POSError, TypeError):
-				logger.error("Errors getting ids from index %s(%s) in catalog %s", 
+				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
 							name, index, catalog)
 
 	result['Missing'] = list(missing)
