@@ -335,9 +335,12 @@ class CheckIndicesView(AbstractAuthenticatedView,
 		for catalog in catalogs:
 			catalog.unindex_doc(docid)
 
-	def _process_ids(self, catalogs, docids, missing, broken):
+	def _process_ids(self, catalogs, docids, missing, broken, seen):
 		intids = self.intids
 		for uid in docids:
+			if uid in seen:
+				continue
+			seen.add(uid)
 			try:
 				obj = intids.queryObject(uid)
 				if obj is None:
@@ -353,6 +356,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 				pass
 
 	def __call__(self):
+		seen = set()
 		result = LocatedExternalDict()
 		broken = result['Broken'] = {}
 		missing = result['Missing'] = set()
@@ -362,15 +366,15 @@ class CheckIndicesView(AbstractAuthenticatedView,
 			for index in catalog.values():
 				if IIndexValues.providedBy(index):
 					docids = list(index.ids())
-					self._process_ids(catalogs, docids, missing, broken)
+					self._process_ids(catalogs, docids, missing, broken, seen)
 				elif IKeywordIndex.providedBy(index):
 					docids = list(index.ids())
-					self._process_ids(catalogs, docids, missing, broken)
+					self._process_ids(catalogs, docids, missing, broken, seen)
 				elif isinstance(index, TopicIndex):
 					for filter_index in index._filters.values():
 						if isinstance(filter_index, ITopicFilteredSet):
 							docids = list(filter_index.getIds())
-							self._process_ids(catalogs, docids, missing, broken)
+							self._process_ids(catalogs, docids, missing, broken, seen)
 
 		result['Missing'] = list(missing)
 		result['TotalBroken'] = len(broken)
