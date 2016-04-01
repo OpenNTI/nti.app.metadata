@@ -91,13 +91,13 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 					processed = _process_ids(catalogs, docids, missing, broken, seen)
 					if processed:
 						logger.info("%s record(s) unindexed. Source %s,%s", 
-									len(processed), name, index)
+									len(processed), name, catalog)
 				elif IKeywordIndex.providedBy(index):
 					docids = list(index.ids())
 					processed = _process_ids(catalogs, docids, missing, broken, seen)
 					if processed:
 						logger.info("%s record(s) unindexed. Source %s,%s", 
-									len(processed), name, index)
+									len(processed), name, catalog)
 				elif isinstance(index, TopicIndex):
 					for filter_index in index._filters.values():
 						if isinstance(filter_index, ITopicFilteredSet):
@@ -106,7 +106,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 													 broken, seen)
 							if processed:
 								logger.info("%s record(s) unindexed. Source %s,%s",
-											len(processed), name, index)
+											len(processed), name, catalog)
 			except (POSError, TypeError):
 				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
 							 name, index, catalog)
