@@ -59,6 +59,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 			catalog.unindex_doc(docid)
 
 	def _process_ids(catalogs, docids, missing, broken, seen):
+		result = set()
 		for uid in docids:
 			if uid in seen:
 				continue
@@ -66,16 +67,20 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 			try:
 				obj = intids.queryObject(uid)
 				if obj is None:
+					result.append(uid)
 					_unindex(catalogs, uid)
 					missing.add(uid)
 				elif isBroken(obj):
+					result.append(uid)
 					_unindex(catalogs, uid)
 					broken[uid] = str(type(obj))
 			except (POSError, TypeError):
+				result.append(uid)
 				_unindex(catalogs, uid)
 				broken[uid] = str(type(obj))
 			except (AttributeError):
 				pass
+		return result
 
 	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
 	for catalog in catalogs:
@@ -83,18 +88,28 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 			try:
 				if IIndexValues.providedBy(index):
 					docids = list(index.ids())
-					_process_ids(catalogs, docids, missing, broken, seen)
+					processed = _process_ids(catalogs, docids, missing, broken, seen)
+					if processed:
+						logger.info("%s record(s) unindexed. Source %s,%s", 
+									len(processed), name, index)
 				elif IKeywordIndex.providedBy(index):
 					docids = list(index.ids())
-					_process_ids(catalogs, docids, missing, broken, seen)
+					processed = _process_ids(catalogs, docids, missing, broken, seen)
+					if processed:
+						logger.info("%s record(s) unindexed. Source %s,%s", 
+									len(processed), name, index)
 				elif isinstance(index, TopicIndex):
 					for filter_index in index._filters.values():
 						if isinstance(filter_index, ITopicFilteredSet):
 							docids = list(filter_index.getIds())
-							_process_ids(catalogs, docids, missing, broken, seen)
+							processed = _process_ids(catalogs, docids, missing, 
+													 broken, seen)
+							if processed:
+								logger.info("%s record(s) unindexed. Source %s,%s",
+											len(processed), name, index)
 			except (POSError, TypeError):
 				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
-							name, index, catalog)
+							 name, index, catalog)
 
 	result['Missing'] = list(missing)
 	result['TotalIndexed'] = len(seen)
