@@ -168,8 +168,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 		items = result[ITEMS] = {}
 		for iid, mimeType, obj in find_principal_metadata_objects(principal, accept):
 			try:
-				ext_obj = to_external_object(obj)
-				ext_obj.pop(LINKS, None)
+				ext_obj = to_external_object(obj, decorate=False)
 				items[iid] = ext_obj
 			except Exception:
 				items[iid] = {'Class':'NonExternalizableObject',
