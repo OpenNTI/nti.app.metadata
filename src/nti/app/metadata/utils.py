@@ -67,15 +67,15 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 			try:
 				obj = intids.queryObject(uid)
 				if obj is None:
-					result.append(uid)
+					result.add(uid)
 					_unindex(catalogs, uid)
 					missing.add(uid)
 				elif isBroken(obj):
-					result.append(uid)
+					result.add(uid)
 					_unindex(catalogs, uid)
 					broken[uid] = str(type(obj))
 			except (POSError, TypeError):
-				result.append(uid)
+				result.add(uid)
 				_unindex(catalogs, uid)
 				broken[uid] = str(type(obj))
 			except (AttributeError):
