@@ -37,7 +37,7 @@ def _process_args(args):
 def main():
 	arg_parser = argparse.ArgumentParser(description="Metadata index checker")
 	arg_parser.add_argument('-v', '--verbose', help="Be verbose", action='store_true',
-							 est='verbose')
+							dest='verbose')
 	arg_parser.add_argument('-a', '--all', help="Include all catalogs", 
 							action='store_true',
 							dest='all')
