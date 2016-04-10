@@ -28,7 +28,8 @@ def _process_args(args):
 	else:
 		catalog_interface = IMetadataCatalog
 
-	result = check_indices(catalog_interface=catalog_interface)
+	result = check_indices(catalog_interface=catalog_interface,
+						   test_broken=args.broken)
 	if args.verbose:
 		pprint.pprint(result)
 	return result
@@ -36,10 +37,14 @@ def _process_args(args):
 def main():
 	arg_parser = argparse.ArgumentParser(description="Metadata index checker")
 	arg_parser.add_argument('-v', '--verbose', help="Be verbose", action='store_true',
-							 dest='verbose')
-	arg_parser.add_argument('-a', '--all', help="Include all catalogs", action='store_true',
-							 dest='all')
-
+							 est='verbose')
+	arg_parser.add_argument('-a', '--all', help="Include all catalogs", 
+							action='store_true',
+							dest='all')
+	arg_parser.add_argument('-b', '--broken', help="Tesst for broken objects", 
+							action='store_true',
+							dest='broken')
+	
 	args = arg_parser.parse_args()
 	env_dir = os.getenv('DATASERVER_DIR')
 	if not env_dir or not os.path.exists(env_dir) and not os.path.isdir(env_dir):

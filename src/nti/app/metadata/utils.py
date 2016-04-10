@@ -47,10 +47,11 @@ def find_principal_metadata_objects(principal, accept=(), intids=None):
 		if iid is not None:
 			yield iid, mime_type, obj
 
-def check_indices(catalog_interface=IMetadataCatalog, intids=None):
+def check_indices(catalog_interface=IMetadataCatalog, intids=None, 
+				  test_broken=True):
 	seen = set()
+	broken = dict()
 	result = LocatedExternalDict()
-	broken = result['Broken'] = {}
 	missing = result['Missing'] = set()	
 	intids = component.getUtility(IIntIds) if intids is None else intids
 
@@ -70,7 +71,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 					result.add(uid)
 					_unindex(catalogs, uid)
 					missing.add(uid)
-				elif isBroken(obj):
+				elif test_broken and isBroken(obj):
 					result.add(uid)
 					_unindex(catalogs, uid)
 					broken[uid] = str(type(obj))
@@ -111,8 +112,10 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None):
 				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
 							 name, index, catalog)
 
-	result['Missing'] = list(missing)
+	result['Missing'] = sorted(missing)
 	result['TotalIndexed'] = len(seen)
-	result['TotalBroken'] = len(broken)
 	result['TotalMissing'] = len(missing)
+	if test_broken:
+		result['Broken'] = broken
+		result['TotalBroken'] = len(broken)
 	return result
