@@ -15,6 +15,8 @@ import time
 from zope import component
 from zope import interface
 
+from zope.catalog.interfaces import ICatalog
+
 from zope.container.contained import Contained
 
 from zope.intid.interfaces import IIntIds
@@ -74,6 +76,7 @@ from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.zope_catalog.catalog import ResultSet
+from nti.zope_catalog.interfaces import IMetadataCatalog
 
 ITEMS = StandardExternalFields.ITEMS
 LINKS = StandardExternalFields.LINKS
@@ -322,8 +325,26 @@ class CheckIndicesView(AbstractAuthenticatedView,
 	def intids(self):
 		return  component.getUtility(IIntIds)
 
+	def readInput(self):
+		if self.request.body:
+			values = super(ProcessQueueView, self).readInput()
+			result = CaseInsensitiveDict(values)
+		else:
+			values = self.request.params
+			result = CaseInsensitiveDict(values)
+		return result
+
 	def __call__(self):
-		result = check_indices(intids=self.intids)
+		values = self.readInput()
+		all_catalog = is_true(values.get('all'))
+		test_broken = is_true(values.get('broken'))
+		if all_catalog:
+			catalog_interface = ICatalog
+		else:
+			catalog_interface = IMetadataCatalog
+		result = check_indices(catalog_interface=catalog_interface,
+							   test_broken=test_broken,
+							   intids=self.intids)
 		return result
 
 @view_config(name='UserUGD')
