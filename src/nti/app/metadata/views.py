@@ -327,7 +327,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 
 	def readInput(self):
 		if self.request.body:
-			values = super(ProcessQueueView, self).readInput()
+			values = super(CheckIndicesView, self).readInput()
 			result = CaseInsensitiveDict(values)
 		else:
 			values = self.request.params
