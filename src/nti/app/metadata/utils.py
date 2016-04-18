@@ -48,7 +48,7 @@ def find_principal_metadata_objects(principal, accept=(), intids=None):
 			yield iid, mime_type, obj
 
 def check_indices(catalog_interface=IMetadataCatalog, intids=None, 
-				  test_broken=True):
+				  test_broken=False):
 	seen = set()
 	broken = dict()
 	result = LocatedExternalDict()
