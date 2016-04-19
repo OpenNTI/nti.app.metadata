@@ -96,6 +96,7 @@ class TestAdminViews(ApplicationLayerTest):
 
 		testapp = TestApp(self.app)
 		res = testapp.post('/dataserver2/metadata/check_indices',
+							json.dumps({'broken': True}),
 					 		extra_environ=self._make_extra_environ(),
 					 		status=200)
 
