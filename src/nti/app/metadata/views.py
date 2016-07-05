@@ -75,12 +75,16 @@ from nti.metadata.reactor import process_queue
 
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
+from nti.ntiids.ntiids import find_object_with_ntiid
+
 from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
 ITEMS = StandardExternalFields.ITEMS
 LINKS = StandardExternalFields.LINKS
+TOTAL = StandardExternalFields.TOTAL
 MIMETYPE = StandardExternalFields.MIMETYPE
+ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 
 @interface.implementer(IPathAdapter)
 class MetadataPathAdapter(Contained):
@@ -177,20 +181,20 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 		result['ItemCount'] = result['Total'] = len(items)
 		return result
 
-@view_config(name='ReIndex')
-@view_config(name='reindex')
+@view_config(name='ReindexUserObjects')
+@view_config(name='reindex_user_objects')
 @view_defaults(route_name='objects.generic.traversal',
 			   renderer='rest',
 			   request_method='POST',
 			   context=MetadataPathAdapter,
 			   permission=nauth.ACT_NTI_ADMIN)
-class ReindexView(AbstractAuthenticatedView,
-				  ModeledContentUploadRequestUtilsMixin):
+class ReindexUserObjectsView(AbstractAuthenticatedView,
+				  			 ModeledContentUploadRequestUtilsMixin):
 
 	def readInput(self, value=None):
 		result = CaseInsensitiveDict()
 		if self.request.body:
-			values = super(ReindexView, self).readInput(value=value)
+			values = super(ReindexUserObjectsView, self).readInput(value=value)
 			result.update(**values)
 		return result
 
@@ -230,6 +234,54 @@ class ReindexView(AbstractAuthenticatedView,
 						 system=is_true(system),
 						 queue_limit=queue_limit,
 						 all_users=is_true(all_users))
+		return result
+
+@view_config(name='Reindex')
+@view_config(name='reindex')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
+class ReindexView(AbstractAuthenticatedView,
+				  ModeledContentUploadRequestUtilsMixin):
+
+	def readInput(self, value=None):
+		if self.request.body:
+			result = CaseInsensitiveDict(super(ReindexView, self).readInput(value=value))
+		else:
+			result = CaseInsensitiveDict(self.request.params)
+		return result
+
+	@property
+	def intids(self):
+		return component.getUtility(IIntIds)
+
+	def _do_call(self):
+		values = self.readInput()
+		ntiids = values.get('ntiid') or values.get('ntiids')
+		if isinstance(ntiids, six.string_types):
+			ntiids = ntiids.split()
+		if not ntiids:
+			raise hexc.HTTPUnprocessableEntity('Must specify a valid NTIID.')
+
+		all_catalog = is_true(values.get('all'))
+		if all_catalog:
+			catalog_interface = ICatalog
+		else:
+			catalog_interface = IMetadataCatalog
+		catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
+
+		result = LocatedExternalDict()
+		items = result[ITEMS] = {}
+		for ntiid in set(ntiids):
+			obj = find_object_with_ntiid(ntiid)
+			doc_id = self.intids.queryId(obj)
+			if doc_id is None:
+				continue
+			items[ntiid] = doc_id
+			for catalog in catalogs:
+				catalog.index_doc(doc_id, obj)
+		result[TOTAL] = result[ITEM_COUNT] = len(items)
 		return result
 
 @view_config(name='ProcessQueue')
@@ -454,5 +506,5 @@ class UGDView(AbstractAuthenticatedView):
 		result = LocatedExternalDict()
 		uids = self.get_ids(user, ntiid, mime_types)
 		items = result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
-		result['ItemCount'] = result['Total'] = len(items)
+		result[ITEM_COUNT] = result[TOTAL] = len(items)
 		return result
