@@ -27,11 +27,14 @@ from nti.dataserver.interfaces import IShardLayout
 from nti.dataserver.users import User
 
 from nti.externalization.interfaces import LocatedExternalDict
+from nti.externalization.interfaces import StandardExternalFields
 
 from nti.metadata import get_iid
 from nti.metadata import metadata_queue
 
 from nti.metadata.reactor import process_queue
+
+TOTAL = StandardExternalFields.TOTAL
 
 def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
 	result = 0
@@ -55,7 +58,7 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 	if all_users:
 		dataserver = component.getUtility(IDataserver)
 		users_folder = IShardLayout(dataserver).users_folder
-		usernames = users_folder.keys()
+		usernames = list(users_folder.keys()) # snapshot
 
 	total = 0
 	now = time.time()
@@ -87,7 +90,7 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
 
 	elapsed = time.time() - now
 	result = LocatedExternalDict()
-	result['Total'] = total
+	result[TOTAL] = total
 	result['Elapsed'] = elapsed
 	result['MimeTypeCount'] = dict(mt_count)
 
