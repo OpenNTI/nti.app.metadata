@@ -280,7 +280,10 @@ class ReindexView(AbstractAuthenticatedView,
 				continue
 			items[ntiid] = doc_id
 			for catalog in catalogs:
-				catalog.index_doc(doc_id, obj)
+				if IMetadataCatalog.providedBy(catalog):
+					catalog.force_index_doc(doc_id, obj)
+				else:
+					catalog.index_doc(doc_id, obj)
 		result[TOTAL] = result[ITEM_COUNT] = len(items)
 		return result
 
