@@ -41,8 +41,6 @@ from nti.app.metadata.utils import find_principal_metadata_objects
 
 from nti.app.metadata.reindexer import reindex
 
-from nti.common.property import Lazy
-
 from nti.common.maps import CaseInsensitiveDict
 
 from nti.common.string import is_true
@@ -76,6 +74,8 @@ from nti.metadata.reactor import process_queue
 from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.ntiids.ntiids import find_object_with_ntiid
+
+from nti.property.property import Lazy
 
 from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IMetadataCatalog
