@@ -131,7 +131,7 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 
 		result = LocatedExternalDict()
 		items = result[ITEMS] = sorted(mime_types)
-		result['ItemCount'] = result['Total'] = len(items)
+		result[ITEM_COUNT] = result[TOTAL] = len(items)
 		return result
 
 @view_config(name='GetMetadataObjects')
@@ -178,7 +178,7 @@ class GetMetadataObjectsView(AbstractAuthenticatedView):
 				items[iid] = {'Class':'NonExternalizableObject',
 							  'InternalType': str(type(obj)),
 							  'MIMETYPE': mimeType }
-		result['ItemCount'] = result['Total'] = len(items)
+		result[ITEM_COUNT] = result[TOTAL] = len(items)
 		return result
 
 @view_config(name='ReindexUserObjects')
@@ -317,7 +317,7 @@ class ProcessQueueView(AbstractAuthenticatedView,
 		total = process_queue(limit=limit)
 		result = LocatedExternalDict()
 		result['Elapsed'] = time.time() - now
-		result['Total'] = total
+		result[TOTAL] = total
 		return result
 
 @view_config(name='QueuedObjects')
@@ -345,7 +345,7 @@ class QueuedObjectsView(AbstractAuthenticatedView):
 				items[key] = {'Message': str(e),
 							  'Object': str(type(obj)),
 							  'Exception': str(type(e))}
-		result['ItemCount'] = result['Total'] = len(items)
+		result[ITEM_COUNT] = result[TOTAL] = len(items)
 		return result
 
 @view_config(name='SyncQueue')
