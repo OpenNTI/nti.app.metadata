@@ -12,6 +12,7 @@ logger = __import__('logging').getLogger(__name__)
 from zope import component
 
 from zope.index.topic import TopicIndex
+
 from zope.index.topic.interfaces import ITopicFilteredSet
 
 from zope.intid.interfaces import IIntIds
@@ -21,6 +22,8 @@ from zc.catalog.interfaces import IIndexValues
 from zope.mimetype.interfaces import IContentTypeAware
 
 from ZODB.POSException import POSError
+
+from nti.contentlibrary.indexed_data import get_library_catalog
 
 from nti.externalization.interfaces import LocatedExternalDict
 
@@ -54,6 +57,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
 	result = LocatedExternalDict()
 	missing = result['Missing'] = set()	
 	intids = component.getUtility(IIntIds) if intids is None else intids
+	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
+	catalogs.append(get_library_catalog())
 
 	def _unindex(catalogs, docid):
 		for catalog in catalogs:
@@ -83,8 +88,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
 				pass
 		return result
 
-	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
-	for catalog in catalogs:
+	def _process_catalog(catalog):
 		for name, index in catalog.items():
 			try:
 				if IIndexValues.providedBy(index):
@@ -111,6 +115,10 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
 			except (POSError, TypeError):
 				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
 							 name, index, catalog)
+
+	for catalog in catalogs:
+		if catalog is not None:
+			_process_catalog(catalog)
 
 	result['Missing'] = sorted(missing)
 	result['TotalIndexed'] = len(seen)
