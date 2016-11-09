@@ -49,6 +49,7 @@ from nti.dataserver import authorization as nauth
 
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
+from nti.dataserver.interfaces import IUserGeneratedData
 
 from nti.dataserver.metadata_index import IX_CREATOR
 from nti.dataserver.metadata_index import IX_MIMETYPE
@@ -285,6 +286,34 @@ class ReindexView(AbstractAuthenticatedView,
 				else:
 					catalog.index_doc(doc_id, obj)
 		result[TOTAL] = result[ITEM_COUNT] = len(items)
+		return result
+
+@view_config(name='IndexUserGeneratedData')
+@view_defaults(route_name='objects.generic.traversal',
+			   renderer='rest',
+			   request_method='POST',
+			   context=MetadataPathAdapter,
+			   permission=nauth.ACT_NTI_ADMIN)
+class IndexUserGeneratedDataView(AbstractAuthenticatedView,
+				  				 ModeledContentUploadRequestUtilsMixin):
+
+	def _do_call(self):
+		total = 0
+		queue = metadata_queue()
+		intids = component.getUtility(IIntIds)
+		catalog = dataserver_metadata_catalog()
+		if queue is not None and catalog is not None:
+			mimeTypeIdx = catalog[IX_MIMETYPE]
+			for uid in mimeTypeIdx.ids():
+				obj = intids.queryObject(uid)
+				if IUserGeneratedData.providedBy(obj):
+					try:
+						queue.add(uid)
+						total += 1
+					except TypeError:
+						pass
+		result = LocatedExternalDict()
+		result[TOTAL] = result[ITEM_COUNT] = total
 		return result
 
 @view_config(name='ProcessQueue')
