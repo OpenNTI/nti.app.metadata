@@ -25,6 +25,8 @@ from zope.security.management import system_user
 
 from zope.traversing.interfaces import IPathAdapter
 
+from ZODB.POSException import POSError
+
 from zc.catalog.interfaces import IValueIndex
 
 from pyramid import httpexceptions as hexc
@@ -129,7 +131,6 @@ class GetMimeTypesView(AbstractAuthenticatedView):
 			if not IValueIndex.providedBy(index):
 				continue
 			mime_types.update(index.values_to_documents.keys())
-
 		result = LocatedExternalDict()
 		items = result[ITEMS] = sorted(mime_types)
 		result[ITEM_COUNT] = result[TOTAL] = len(items)
@@ -306,12 +307,15 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 			mimeTypeIdx = catalog[IX_MIMETYPE]
 			for uid in mimeTypeIdx.ids():
 				obj = intids.queryObject(uid)
-				if IUserGeneratedData.providedBy(obj):
-					try:
-						queue.add(uid)
-						total += 1
-					except TypeError:
-						pass
+				try:
+					if IUserGeneratedData.providedBy(obj):
+						try:
+							queue.add(uid)
+							total += 1
+						except TypeError:
+							pass
+				except (TypeError, POSError):
+					pass
 		result = LocatedExternalDict()
 		result[TOTAL] = result[ITEM_COUNT] = total
 		return result
