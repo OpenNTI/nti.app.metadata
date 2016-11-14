@@ -317,7 +317,6 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 					if IUserGeneratedData.providedBy(obj):
 						try:
 							queue.add(uid)
-							total += 1
 						except TypeError:
 							pass
 				except (TypeError, POSError):
