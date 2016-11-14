@@ -300,12 +300,18 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 
 	def _do_call(self):
 		total = 0
+		count = 0
 		queue = metadata_queue()
 		intids = component.getUtility(IIntIds)
 		catalog = dataserver_metadata_catalog()
 		if queue is not None and catalog is not None:
 			mimeTypeIdx = catalog[IX_MIMETYPE]
+			total = len(mimeTypeIdx.ids())
+			logger.info('Indexing new extent (count=%s)', total)
 			for uid in mimeTypeIdx.ids():
+				count += 1
+				if count % 10000 == 0:
+					logger.info( 'Indexing new extent (%s/%s)', count, total)
 				obj = intids.queryObject(uid)
 				try:
 					if IUserGeneratedData.providedBy(obj):
