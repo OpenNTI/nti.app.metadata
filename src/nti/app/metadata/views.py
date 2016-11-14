@@ -310,7 +310,7 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 			logger.info('Indexing new extent (count=%s)', total)
 			for uid in mimeTypeIdx.ids():
 				count += 1
-				if count % 10000 == 0:
+				if count % 5000 == 0:
 					logger.info( 'Indexing new extent (%s/%s)', count, total)
 				obj = intids.queryObject(uid)
 				try:
