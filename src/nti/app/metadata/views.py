@@ -301,6 +301,7 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 	def _do_call(self):
 		total = 0
 		count = 0
+		indexed = 0
 		queue = metadata_queue()
 		intids = component.getUtility(IIntIds)
 		catalog = dataserver_metadata_catalog()
@@ -317,12 +318,14 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 					if IUserGeneratedData.providedBy(obj):
 						try:
 							queue.add(uid)
+							indexed += 1
 						except TypeError:
 							pass
 				except (TypeError, POSError):
 					pass
 		result = LocatedExternalDict()
-		result[TOTAL] = result[ITEM_COUNT] = total
+		result[TOTAL] = total
+		result[ITEM_COUNT] = indexed
 		return result
 
 @view_config(name='ProcessQueue')
