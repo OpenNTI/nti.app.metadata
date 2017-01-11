@@ -35,95 +35,100 @@ from nti.zope_catalog.catalog import isBroken
 from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
+
 def get_mime_type(obj, default='unknown'):
-	obj = IContentTypeAware(obj, obj)
-	result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
-	return result or default
+    obj = IContentTypeAware(obj, obj)
+    result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
+    return result or default
+
 
 def find_principal_metadata_objects(principal, accept=(), intids=None):
-	intids = component.getUtility(IIntIds) if intids is None else intids
-	for obj in get_principal_metadata_objects(principal):
-		mime_type = get_mime_type(obj)
-		if accept and mime_type not in accept:
-			continue
-		iid = get_iid(obj, intids=intids)
-		if iid is not None:
-			yield iid, mime_type, obj
+    intids = component.getUtility(IIntIds) if intids is None else intids
+    for obj in get_principal_metadata_objects(principal):
+        mime_type = get_mime_type(obj)
+        if accept and mime_type not in accept:
+            continue
+        iid = get_iid(obj, intids=intids)
+        if iid is not None:
+            yield iid, mime_type, obj
 
-def check_indices(catalog_interface=IMetadataCatalog, intids=None, 
-				  test_broken=False):
-	seen = set()
-	broken = dict()
-	result = LocatedExternalDict()
-	missing = result['Missing'] = set()	
-	intids = component.getUtility(IIntIds) if intids is None else intids
-	catalogs = [catalog for _, catalog in component.getUtilitiesFor(catalog_interface)]
-	catalogs.append(get_library_catalog())
 
-	def _unindex(catalogs, docid):
-		for catalog in catalogs:
-			catalog.unindex_doc(docid)
+def check_indices(catalog_interface=IMetadataCatalog, intids=None,
+                  test_broken=False):
+    seen = set()
+    broken = dict()
+    result = LocatedExternalDict()
+    missing = result['Missing'] = set()
+    intids = component.getUtility(IIntIds) if intids is None else intids
+    catalogs = [c for _, c in component.getUtilitiesFor(catalog_interface)]
+    catalogs.append(get_library_catalog())
 
-	def _process_ids(catalogs, docids, missing, broken, seen):
-		result = set()
-		for uid in docids:
-			if uid in seen:
-				continue
-			seen.add(uid)
-			try:
-				obj = intids.queryObject(uid)
-				if obj is None:
-					result.add(uid)
-					_unindex(catalogs, uid)
-					missing.add(uid)
-				elif test_broken and isBroken(obj):
-					result.add(uid)
-					_unindex(catalogs, uid)
-					broken[uid] = str(type(obj))
-			except (POSError, TypeError):
-				result.add(uid)
-				_unindex(catalogs, uid)
-				broken[uid] = str(type(obj))
-			except (AttributeError):
-				pass
-		return result
+    def _unindex(catalogs, docid):
+        for catalog in catalogs:
+            catalog.unindex_doc(docid)
 
-	def _process_catalog(catalog):
-		for name, index in catalog.items():
-			try:
-				if IIndexValues.providedBy(index):
-					docids = list(index.ids())
-					processed = _process_ids(catalogs, docids, missing, broken, seen)
-					if processed:
-						logger.info("%s record(s) unindexed. Source %s,%s", 
-									len(processed), name, catalog)
-				elif IKeywordIndex.providedBy(index):
-					docids = list(index.ids())
-					processed = _process_ids(catalogs, docids, missing, broken, seen)
-					if processed:
-						logger.info("%s record(s) unindexed. Source %s,%s", 
-									len(processed), name, catalog)
-				elif isinstance(index, TopicIndex):
-					for filter_index in index._filters.values():
-						if isinstance(filter_index, ITopicFilteredSet):
-							docids = list(filter_index.getIds())
-							processed = _process_ids(catalogs, docids, missing, 
-													 broken, seen)
-							if processed:
-								logger.info("%s record(s) unindexed. Source %s,%s",
-											len(processed), name, catalog)
-			except (POSError, TypeError):
-				logger.error('Errors getting ids from index "%s" (%s) in catalog %s', 
-							 name, index, catalog)
+    def _process_ids(catalogs, docids, missing, broken, seen):
+        result = set()
+        for uid in docids:
+            if uid in seen:
+                continue
+            seen.add(uid)
+            try:
+                obj = intids.queryObject(uid)
+                if obj is None:
+                    result.add(uid)
+                    _unindex(catalogs, uid)
+                    missing.add(uid)
+                elif test_broken and isBroken(obj):
+                    result.add(uid)
+                    _unindex(catalogs, uid)
+                    broken[uid] = str(type(obj))
+            except (POSError, TypeError):
+                result.add(uid)
+                _unindex(catalogs, uid)
+                broken[uid] = str(type(obj))
+            except (AttributeError):
+                pass
+        return result
 
-	for catalog in catalogs:
-		if catalog is not None:
-			_process_catalog(catalog)
+    def _process_catalog(catalog):
+        for name, index in catalog.items():
+            try:
+                if IIndexValues.providedBy(index):
+                    docids = list(index.ids())
+                    processed = _process_ids(
+                        catalogs, docids, missing, broken, seen)
+                    if processed:
+                        logger.info("%s record(s) unindexed. Source %s,%s",
+                                    len(processed), name, catalog)
+                elif IKeywordIndex.providedBy(index):
+                    docids = list(index.ids())
+                    processed = _process_ids(
+                        catalogs, docids, missing, broken, seen)
+                    if processed:
+                        logger.info("%s record(s) unindexed. Source %s,%s",
+                                    len(processed), name, catalog)
+                elif isinstance(index, TopicIndex):
+                    for filter_index in index._filters.values():
+                        if ITopicFilteredSet.providedBy(filter_index):
+                            docids = list(filter_index.getIds())
+                            processed = _process_ids(catalogs, docids, missing,
+                                                     broken, seen)
+                            if processed:
+                                logger.info("%s record(s) unindexed. Source %s,%s",
+                                            len(processed), name, catalog)
+            except (POSError, TypeError):
+                logger.error('Errors getting ids from index "%s" (%s) in catalog %s',
+                             name, index, catalog)
 
-	result['Missing'] = sorted(missing)
-	result['TotalIndexed'] = len(seen)
-	result['TotalMissing'] = len(missing)
-	if test_broken:
-		result['Broken'] = broken
-		result['TotalBroken'] = len(broken)
-	return result
+    for catalog in catalogs:
+        if catalog is not None:
+            _process_catalog(catalog)
+
+    result['Missing'] = sorted(missing)
+    result['TotalIndexed'] = len(seen)
+    result['TotalMissing'] = len(missing)
+    if test_broken:
+        result['Broken'] = broken
+        result['TotalBroken'] = len(broken)
+    return result
