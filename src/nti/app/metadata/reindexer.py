@@ -36,63 +36,65 @@ from nti.metadata.reactor import process_queue
 
 TOTAL = StandardExternalFields.TOTAL
 
+
 def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
-	result = 0
-	queue = metadata_queue() if queue is None else queue
-	mt_count = defaultdict(int) if mt_count is None else mt_count
-	intids = component.getUtility(IIntIds) if intids is None else intids
-	for iid, mimeType, obj in find_principal_metadata_objects(principal, accept, intids):
-		try:
-			iid = get_iid(obj, intids=intids)
-			if iid is not None:
-				queue.add(iid)
-		except TypeError:
-			pass
-		else:
-			result += 1
-			mt_count[mimeType] = mt_count[mimeType] + 1
-	return result, mt_count
+    result = 0
+    queue = metadata_queue() if queue is None else queue
+    mt_count = defaultdict(int) if mt_count is None else mt_count
+    intids = component.getUtility(IIntIds) if intids is None else intids
+    for iid, mimeType, obj in find_principal_metadata_objects(principal, accept, intids):
+        try:
+            iid = get_iid(obj, intids=intids)
+            if iid is not None:
+                queue.add(iid)
+        except TypeError:
+            pass
+        else:
+            result += 1
+            mt_count[mimeType] = mt_count[mimeType] + 1
+    return result, mt_count
+
 
 def reindex(usernames=(), all_users=False, system=False, accept=(),
-			queue_limit=None, intids=None):
-	if all_users:
-		dataserver = component.getUtility(IDataserver)
-		users_folder = IShardLayout(dataserver).users_folder
-		usernames = list(users_folder.keys()) # snapshot
+            queue_limit=None, intids=None):
+    if all_users:
+        dataserver = component.getUtility(IDataserver)
+        users_folder = IShardLayout(dataserver).users_folder
+        usernames = list(users_folder.keys())  # snapshot
 
-	total = 0
-	now = time.time()
-	queue = metadata_queue()
-	mt_count = defaultdict(int)
-	intids = component.getUtility(IIntIds) if intids is None else intids
+    total = 0
+    now = time.time()
+    queue = metadata_queue()
+    mt_count = defaultdict(int)
+    intids = component.getUtility(IIntIds) if intids is None else intids
 
-	for username in usernames or ():
-		user = User.get_user(username)
-		if user is None or not IUser.providedBy(user):
-			continue
-		count, _ = reindex_principal(user,
-									 accept, 
-									 queue=queue,
-									 intids=intids,
-									 mt_count=mt_count)
-		total += count
+    for username in usernames or ():
+        user = User.get_user(username)
+        if user is None or not IUser.providedBy(user):
+            continue
+        count, _ = reindex_principal(user,
+                                     accept,
+                                     queue=queue,
+                                     intids=intids,
+                                     mt_count=mt_count)
+        total += count
 
-	if system:
-		count, _ = reindex_principal(system_user(), 
-									 accept, 
-									 queue=queue, 
-									 intids=intids,
-									 mt_count=mt_count)
-		total += count
+    if system:
+        count, _ = reindex_principal(system_user(),
+                                     accept,
+                                     queue=queue,
+                                     intids=intids,
+                                     mt_count=mt_count)
+        total += count
 
-	if queue_limit is not None:
-		process_queue(limit=queue_limit)
+    if queue_limit is not None:
+        process_queue(limit=queue_limit)
 
-	elapsed = time.time() - now
-	result = LocatedExternalDict()
-	result[TOTAL] = total
-	result['Elapsed'] = elapsed
-	result['MimeTypeCount'] = dict(mt_count)
+    elapsed = time.time() - now
+    result = LocatedExternalDict()
+    result[TOTAL] = total
+    result['Elapsed'] = elapsed
+    result['MimeTypeCount'] = dict(mt_count)
 
-	logger.info("%s object(s) processed in %s(s)", total, elapsed)
-	return result
+    logger.info("%s object(s) processed in %s(s)", total, elapsed)
+    return result
