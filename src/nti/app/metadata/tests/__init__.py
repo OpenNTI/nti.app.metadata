@@ -20,11 +20,12 @@ from nti.testing.layers import ConfiguringLayerMixin
 
 import zope.testing.cleanup
 
+
 class SharedConfiguringTestLayer(ZopeComponentLayer,
                                  GCLayerMixin,
                                  ConfiguringLayerMixin,
                                  DSInjectorMixin):
-    
+
     set_up_packages = ('nti.dataserver', 'nti.app.metadata')
 
     @classmethod
@@ -45,9 +46,11 @@ class SharedConfiguringTestLayer(ZopeComponentLayer,
     def testTearDown(cls):
         pass
 
+
 class MetadataLayerTest(unittest.TestCase):
     layer = SharedConfiguringTestLayer
-    
+
+
 class MetadataApplicationTestLayer(ApplicationTestLayer):
 
     @classmethod

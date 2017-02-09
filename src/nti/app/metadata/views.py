@@ -12,6 +12,8 @@ logger = __import__('logging').getLogger(__name__)
 import six
 import time
 
+from requests.structures import CaseInsensitiveDict
+
 from zope import component
 from zope import interface
 
@@ -42,8 +44,6 @@ from nti.app.metadata.utils import check_indices
 from nti.app.metadata.utils import find_principal_metadata_objects
 
 from nti.app.metadata.reindexer import reindex
-
-from nti.common.maps import CaseInsensitiveDict
 
 from nti.common.string import is_true
 

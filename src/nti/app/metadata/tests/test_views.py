@@ -41,126 +41,129 @@ from nti.appserver.tests.test_application import TestApp
 
 import nti.dataserver.tests.mock_dataserver as mock_dataserver
 
+
 class TestAdminViews(ApplicationLayerTest):
 
-	layer = MetadataApplicationTestLayer
+    layer = MetadataApplicationTestLayer
 
-	def _create_note(self, msg, owner, containerId=None, title=None):
-		note = Note()
-		if title:
-			note.title = IPlainTextContentFragment(title)
-		note.body = [unicode(msg)]
-		note.creator = owner
-		note.containerId = containerId or make_ntiid(nttype='bleach', specific='manga')
-		return note
+    def _create_note(self, msg, owner, containerId=None, title=None):
+        note = Note()
+        if title:
+            note.title = IPlainTextContentFragment(title)
+        note.body = [unicode(msg)]
+        note.creator = owner
+        note.containerId = containerId or make_ntiid(
+            nttype='bleach',
+            specific='manga')
+        return note
 
-	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_process_queue(self):
-		username = 'ichigo@bleach.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			ichigo = self._create_user(username=username)
-			note = self._create_note(u'As Nodt Fear', ichigo.username)
-			ichigo.addContainedObject(note)
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_process_queue(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
 
-		testapp = TestApp(self.app)
-		testapp.post('/dataserver2/metadata/process_queue',
-					 extra_environ=self._make_extra_environ(),
-					 status=200)
+        testapp = TestApp(self.app)
+        testapp.post('/dataserver2/metadata/process_queue',
+                     extra_environ=self._make_extra_environ(),
+                     status=200)
 
-		testapp.post('/dataserver2/metadata/process_queue',
-					 json.dumps({'limit': 'xyt'}),
-					 extra_environ=self._make_extra_environ(),
-					 status=422)
+        testapp.post('/dataserver2/metadata/process_queue',
+                     json.dumps({'limit': 'xyt'}),
+                     extra_environ=self._make_extra_environ(),
+                     status=422)
 
-	@WithSharedApplicationMockDSHandleChanges(testapp=False, users=True)
-	def test_sync_queue(self):
-		with mock_dataserver.mock_db_trans(self.ds):
-			for x in range(10):
-				usr = self._create_user(username='bankai%s' % x)
-				note = self._create_note(u'Shikai %s' % x, usr.username)
-				usr.addContainedObject(note)
+    @WithSharedApplicationMockDSHandleChanges(testapp=False, users=True)
+    def test_sync_queue(self):
+        with mock_dataserver.mock_db_trans(self.ds):
+            for x in range(10):
+                usr = self._create_user(username='bankai%s' % x)
+                note = self._create_note(u'Shikai %s' % x, usr.username)
+                usr.addContainedObject(note)
 
-		testapp = TestApp(self.app)
-		testapp.post('/dataserver2/metadata/sync_queue',
-					 extra_environ=self._make_extra_environ(),
-					 status=204)
+        testapp = TestApp(self.app)
+        testapp.post('/dataserver2/metadata/sync_queue',
+                     extra_environ=self._make_extra_environ(),
+                     status=204)
 
-	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_check_indices(self):
-		username = 'ichigo@bleach.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			ichigo = self._create_user(username=username)
-			note = self._create_note(u'As Nodt Fear', ichigo.username)
-			ichigo.addContainedObject(note)
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_check_indices(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
 
-			note = self._create_note(u'Broken', ichigo.username)
-			ichigo.addContainedObject(note)
-			interface.alsoProvides(note, IBroken)
+            note = self._create_note(u'Broken', ichigo.username)
+            ichigo.addContainedObject(note)
+            interface.alsoProvides(note, IBroken)
 
-		testapp = TestApp(self.app)
-		res = testapp.post('/dataserver2/metadata/check_indices',
-							json.dumps({'broken': True}),
-					 		extra_environ=self._make_extra_environ(),
-					 		status=200)
+        testapp = TestApp(self.app)
+        res = testapp.post('/dataserver2/metadata/check_indices',
+                           json.dumps({'broken': True}),
+                           extra_environ=self._make_extra_environ(),
+                           status=200)
 
-		assert_that(res.json_body,
-					has_entries('Broken', has_value(u"<class 'nti.dataserver.contenttypes.note.Note'>"),
-								'Missing', is_([]),
-								'TotalBroken', 1,
-								'TotalMissing', 0))
+        assert_that(res.json_body,
+                    has_entries('Broken', has_value(u"<class 'nti.dataserver.contenttypes.note.Note'>"),
+                                'Missing', is_([]),
+                                'TotalBroken', 1,
+                                'TotalMissing', 0))
 
-	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_mime_types(self):
-		username = 'ichigo@bleach.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			ichigo = self._create_user(username=username)
-			note = self._create_note(u'As Nodt Fear', ichigo.username)
-			ichigo.addContainedObject(note)
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_mime_types(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
 
-		testapp = TestApp(self.app)
-		res = testapp.get('/dataserver2/metadata/mime_types',
-					 	  extra_environ=self._make_extra_environ(),
-					 	  status=200)
+        testapp = TestApp(self.app)
+        res = testapp.get('/dataserver2/metadata/mime_types',
+                          extra_environ=self._make_extra_environ(),
+                          status=200)
 
-		assert_that(res.json_body,
-					has_entries('Items', contains(u"application/vnd.nextthought.note"),
-								'Total', is_(greater_than_or_equal_to(1))))
+        assert_that(res.json_body,
+                    has_entries('Items', contains(u"application/vnd.nextthought.note"),
+                                'Total', is_(greater_than_or_equal_to(1))))
 
-	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_reindex_user_objects(self):
-		username = 'ichigo@bleach.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			ichigo = self._create_user(username=username)
-			note = self._create_note(u'As Nodt Fear', ichigo.username)
-			ichigo.addContainedObject(note)
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_reindex_user_objects(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
 
-		testapp = TestApp(self.app)
-		res = testapp.post('/dataserver2/metadata/reindex_user_objects',
-							json.dumps({'all': True,
-										'system':True}),
-					 		extra_environ=self._make_extra_environ(),
-					 		status=200)
+        testapp = TestApp(self.app)
+        res = testapp.post('/dataserver2/metadata/reindex_user_objects',
+                           json.dumps({'all': True,
+                                       'system': True}),
+                           extra_environ=self._make_extra_environ(),
+                           status=200)
 
-		assert_that(res.json_body,
-					has_entries('MimeTypeCount', has_entry('application/vnd.nextthought.note', 1),
-								'Elapsed', is_not(none()),
-								'Total', 1))
-		
-	@WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-	def test_reindex(self):
-		username = 'ichigo@bleach.com'
-		with mock_dataserver.mock_db_trans(self.ds):
-			ichigo = self._create_user(username=username)
-			note = self._create_note(u'As Nodt Fear', ichigo.username)
-			ichigo.addContainedObject(note)
-			ntiid = to_external_ntiid_oid(note)
+        assert_that(res.json_body,
+                    has_entries('MimeTypeCount', has_entry('application/vnd.nextthought.note', 1),
+                                'Elapsed', is_not(none()),
+                                'Total', 1))
 
-		testapp = TestApp(self.app)
-		res = testapp.post('/dataserver2/metadata/reindex',
-							json.dumps({'all': True,
-										'ntiid':ntiid}),
-					 		extra_environ=self._make_extra_environ(),
-					 		status=200)
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_reindex(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
+            ntiid = to_external_ntiid_oid(note)
 
-		assert_that(res.json_body,
-					has_entries('Total', 1))
+        testapp = TestApp(self.app)
+        res = testapp.post('/dataserver2/metadata/reindex',
+                           json.dumps({'all': True,
+                                       'ntiid': ntiid}),
+                           extra_environ=self._make_extra_environ(),
+                           status=200)
+
+        assert_that(res.json_body,
+                    has_entries('Total', 1))

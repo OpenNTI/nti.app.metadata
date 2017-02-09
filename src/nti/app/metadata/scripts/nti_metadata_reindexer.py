@@ -31,8 +31,7 @@ def _process_args(args):
 
 
 def main():
-    arg_parser = argparse.ArgumentParser(
-        description="Metadata object reindexer")
+    arg_parser = argparse.ArgumentParser(description="Metadata object reindexer")
     arg_parser.add_argument('-v', '--verbose', help="Be verbose", action='store_true',
                             dest='verbose')
     arg_parser.add_argument('-t', '--types',
