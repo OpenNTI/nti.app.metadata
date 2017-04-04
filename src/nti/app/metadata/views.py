@@ -22,8 +22,6 @@ from zope.container.contained import Contained
 
 from zope.intid.interfaces import IIntIds
 
-from zope.security.management import system_user
-
 from zope.traversing.interfaces import IPathAdapter
 
 from ZODB.POSException import POSError
@@ -40,7 +38,6 @@ from nti.app.base.abstract_views import AbstractAuthenticatedView
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.app.metadata.utils import check_indices
-from nti.app.metadata.utils import find_principal_metadata_objects
 
 from nti.app.metadata.reindexer import reindex
 
@@ -61,12 +58,10 @@ from nti.dataserver.users import User
 
 from nti.dataserver.sharing import SharingContextCache
 
-from nti.externalization.externalization import to_external_object
-
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 
-from nti.metadata import metadata_queue
+from nti.metadata import queue_add
 from nti.metadata import metadata_catalogs
 from nti.metadata import dataserver_metadata_catalog
 
@@ -137,55 +132,6 @@ class GetMimeTypesView(AbstractAuthenticatedView):
         return result
 
 
-@view_config(name='GetMetadataObjects')
-@view_config(name='get_metadata_objects')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='GET',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class GetMetadataObjectsView(AbstractAuthenticatedView):
-
-    def readInput(self, value=None):
-        result = CaseInsensitiveDict(self.request.params)
-        return result
-
-    def __call__(self):
-        values = self.readInput()
-        username = values.get('user') or values.get('username')
-        system = is_true(values.get('system') or values.get('systemUser'))
-        if system:
-            principal = system_user()
-        elif username:
-            principal = User.get_user(username)
-        else:
-            raise hexc.HTTPUnprocessableEntity('Must specify a principal')
-
-        if principal is None:
-            raise hexc.HTTPUnprocessableEntity(
-                'Cannot find the specified user')
-
-        accept = values.get('accept') or values.get('mimeTypes') or u''
-        accept = set(accept.split(',')) if accept else ()
-        if accept and '*/*' not in accept:
-            accept = set(accept)
-        else:
-            accept = ()
-
-        result = LocatedExternalDict()
-        items = result[ITEMS] = {}
-        for iid, mimeType, obj in find_principal_metadata_objects(principal, accept):
-            try:
-                ext_obj = to_external_object(obj, decorate=False)
-                items[iid] = ext_obj
-            except Exception:
-                items[iid] = {'Class': 'NonExternalizableObject',
-                              'InternalType': str(type(obj)),
-                              'MIMETYPE': mimeType}
-        result[ITEM_COUNT] = result[TOTAL] = len(items)
-        return result
-
-
 @view_config(name='ReindexUserObjects')
 @view_config(name='reindex_user_objects')
 @view_defaults(route_name='objects.generic.traversal',
@@ -205,7 +151,6 @@ class ReindexUserObjectsView(AbstractAuthenticatedView,
 
     def _do_call(self):
         values = self.readInput()
-        queue_limit = values.get('limit', None)
         term = values.get('term') or values.get('search')
         all_users = values.get('all') or values.get('allUsers')
         system = values.get('system') or values.get('systemUser')
@@ -226,18 +171,9 @@ class ReindexUserObjectsView(AbstractAuthenticatedView,
         else:
             accept = ()
 
-        # queue limit
-        if queue_limit is not None:
-            try:
-                queue_limit = int(queue_limit)
-                assert queue_limit > 0 or queue_limit == -1
-            except (ValueError, AssertionError):
-                raise hexc.HTTPUnprocessableEntity('invalid queue size')
-
         result = reindex(accept=accept,
                          usernames=usernames,
                          system=is_true(system),
-                         queue_limit=queue_limit,
                          all_users=is_true(all_users))
         return result
 
@@ -308,10 +244,9 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
         total = 0
         count = 0
         indexed = 0
-        queue = metadata_queue()
         intids = component.getUtility(IIntIds)
         catalog = dataserver_metadata_catalog()
-        if queue is not None and catalog is not None:
+        if catalog is not None:
             mimeTypeIdx = catalog[IX_MIMETYPE]
             total = len(mimeTypeIdx.ids())
             logger.info('Indexing new extent (count=%s)', total)
@@ -322,11 +257,7 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
                 obj = intids.queryObject(uid)
                 try:
                     if IUserGeneratedData.providedBy(obj):
-                        try:
-                            queue.add(uid)
-                            indexed += 1
-                        except TypeError:
-                            pass
+                        queue_add(obj)
                 except (TypeError, POSError):
                     pass
         result = LocatedExternalDict()
@@ -344,7 +275,7 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
 class CheckIndicesView(AbstractAuthenticatedView,
                        ModeledContentUploadRequestUtilsMixin):
 
-    @property
+    @Lazy
     def intids(self):
         return component.getUtility(IIntIds)
 
