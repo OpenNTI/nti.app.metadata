@@ -10,7 +10,6 @@ __docformat__ = "restructuredtext en"
 logger = __import__('logging').getLogger(__name__)
 
 import six
-import time
 
 from requests.structures import CaseInsensitiveDict
 
@@ -63,7 +62,6 @@ from nti.dataserver.users import User
 from nti.dataserver.sharing import SharingContextCache
 
 from nti.externalization.externalization import to_external_object
-from nti.externalization.externalization import NonExternalizableObjectError
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
@@ -71,10 +69,6 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.metadata import metadata_queue
 from nti.metadata import metadata_catalogs
 from nti.metadata import dataserver_metadata_catalog
-
-from nti.metadata.reactor import process_queue
-
-from nti.metadata.interfaces import DEFAULT_QUEUE_LIMIT
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 
@@ -339,86 +333,6 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
         result[TOTAL] = total
         result[ITEM_COUNT] = indexed
         return result
-
-
-@view_config(name='ProcessQueue')
-@view_config(name='process_queue')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='POST',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class ProcessQueueView(AbstractAuthenticatedView,
-                       ModeledContentUploadRequestUtilsMixin):
-
-    def readInput(self):
-        result = {}
-        if self.request.body:
-            values = super(ProcessQueueView, self).readInput()
-            result = CaseInsensitiveDict(values)
-        return result
-
-    def _do_call(self):
-        values = self.readInput()
-        limit = values.get('limit', DEFAULT_QUEUE_LIMIT)
-        try:
-            limit = int(limit)
-            assert limit > 0 or limit == -1
-        except (ValueError, AssertionError):
-            raise hexc.HTTPUnprocessableEntity('invalid limit size')
-
-        now = time.time()
-        total = process_queue(limit=limit)
-        result = LocatedExternalDict()
-        result['Elapsed'] = time.time() - now
-        result[TOTAL] = total
-        return result
-
-
-@view_config(name='QueuedObjects')
-@view_config(name='queued_objects')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='GET',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class QueuedObjectsView(AbstractAuthenticatedView):
-
-    def __call__(self):
-        intids = component.getUtility(IIntIds)
-        catalog_queue = metadata_queue()
-        result = LocatedExternalDict()
-        items = result[ITEMS] = {}
-        for key in list(catalog_queue.keys()):
-            try:
-                obj = intids.queryObject(key)
-                if obj is not None:
-                    items[key] = to_external_object(obj)
-            except NonExternalizableObjectError:
-                items[key] = {'Object': str(type(obj))}
-            except Exception as e:
-                items[key] = {'Message': str(e),
-                              'Object': str(type(obj)),
-                              'Exception': str(type(e))}
-        result[ITEM_COUNT] = result[TOTAL] = len(items)
-        return result
-
-
-@view_config(name='SyncQueue')
-@view_config(name='sync_queue')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='POST',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class SyncQueueView(AbstractAuthenticatedView,
-                    ModeledContentUploadRequestUtilsMixin):
-
-    def __call__(self):
-        catalog_queue = metadata_queue()
-        if catalog_queue.syncQueue():
-            logger.info("Queue synched")
-        return hexc.HTTPNoContent()
 
 
 @view_config(name='CheckIndices')
