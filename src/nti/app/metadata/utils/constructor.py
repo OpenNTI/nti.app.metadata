@@ -36,8 +36,12 @@ class Constructor(Processor):
     def extend_context(self, context):
         includePluginsDirective(context, PP_METADATA)
 
-    def create_context(self, env_dir):
-        context = create_context(env_dir, with_library=True)
+    def create_context(self, env_dir, args):
+        slugs = args.slugs
+        context = create_context(env_dir, 
+                                 slugs=slugs,
+                                 plugins=slugs,
+                                 with_library=True)
         self.extend_context(context)
         return context
 

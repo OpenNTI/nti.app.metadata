@@ -9,7 +9,7 @@ entry_points = {
     ],
     "console_scripts": [
         "nti_check_indices = nti.app.metadata.scripts.nti_check_indices:main",
-        "nti_metadata_reindexer = nti.app.metadata.scripts.nti_metadata_reindexer:main"
+        "nti_metadata_processor = nti.app.metadata.utils.constructor:main",
     ],
 }
 
