@@ -106,8 +106,11 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                                     len(processed), name, catalog)
                 elif IKeywordIndex.providedBy(index):
                     docids = list(index.ids())
-                    processed = _process_ids(
-                        catalogs, docids, missing, broken, seen)
+                    processed = _process_ids(catalogs,
+                                             docids, 
+                                             missing, 
+                                             broken, 
+                                             seen)
                     if processed:
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
