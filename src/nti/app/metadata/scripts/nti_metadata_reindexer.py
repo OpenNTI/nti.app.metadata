@@ -22,7 +22,6 @@ from nti.dataserver.utils.base_script import create_context
 def _process_args(args):
     result = reindex(all_users=args.all,
                      system=args.system,
-                     queue_limit=args.limit,
                      accept=args.types or (),
                      usernames=args.usernames or ())
     if args.verbose:
@@ -38,10 +37,6 @@ def main():
                             dest='types',
                             nargs="+",
                             help="The mime types")
-    arg_parser.add_argument('-l', '--limit',
-                            dest='limit',
-                            help="Queue limit",
-                            type=int)
     arg_parser.add_argument('-s', '--system', help="Include system user",
                             action='store_true',
                             dest='system')

@@ -32,8 +32,6 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.metadata import get_iid
 from nti.metadata import metadata_queue
 
-from nti.metadata.reactor import process_queue
-
 TOTAL = StandardExternalFields.TOTAL
 
 
@@ -55,8 +53,7 @@ def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=No
     return result, mt_count
 
 
-def reindex(usernames=(), all_users=False, system=False, accept=(),
-            queue_limit=None, intids=None):
+def reindex(usernames=(), all_users=False, system=False, accept=(), intids=None):
     if all_users:
         dataserver = component.getUtility(IDataserver)
         users_folder = IShardLayout(dataserver).users_folder
@@ -86,9 +83,6 @@ def reindex(usernames=(), all_users=False, system=False, accept=(),
                                      intids=intids,
                                      mt_count=mt_count)
         total += count
-
-    if queue_limit is not None:
-        process_queue(limit=queue_limit)
 
     elapsed = time.time() - now
     result = LocatedExternalDict()
