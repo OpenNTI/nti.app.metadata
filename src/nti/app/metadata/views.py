@@ -61,9 +61,13 @@ from nti.dataserver.sharing import SharingContextCache
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 
+from nti.metadata import QUEUE_NAMES
+
 from nti.metadata import queue_add
 from nti.metadata import metadata_catalogs
 from nti.metadata import dataserver_metadata_catalog
+
+from nti.metadata.processing import get_job_queue
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 
@@ -414,3 +418,43 @@ class UGDView(AbstractAuthenticatedView):
         items = result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
         result[ITEM_COUNT] = result[TOTAL] = len(items)
         return result
+
+
+# queue views
+
+
+@view_config(name='MetaJobs')
+@view_config(name='meta_jobs')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               request_method='GET',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class QueueJobsView(AbstractAuthenticatedView):
+
+    def __call__(self):
+        total = 0
+        result = LocatedExternalDict()
+        items = result[ITEMS] = {}
+        for name in QUEUE_NAMES:
+            queue = get_job_queue(name)
+            items[name] = list(queue.keys())  # snapshopt
+            total += len(items[name])
+        result[TOTAL] = result[ITEM_COUNT] = total
+        return result
+
+
+@view_config(name='EmptyQueues')
+@view_config(name='empty_queues')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               request_method='POST',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class EmptyQueuesView(AbstractAuthenticatedView):
+
+    def __call__(self):
+        for name in QUEUE_NAMES:
+            queue = get_job_queue(name)
+            queue.empty()
+        return hexc.HTTPNoContent()
