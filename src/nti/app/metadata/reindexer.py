@@ -30,25 +30,20 @@ from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
 
 from nti.metadata import get_iid
-from nti.metadata import metadata_queue
+from nti.metadata import queue_add
 
 TOTAL = StandardExternalFields.TOTAL
 
 
-def reindex_principal(principal, accept=(), queue=None, intids=None, mt_count=None):
+def reindex_principal(principal, accept=(), intids=None, mt_count=None):
     result = 0
-    queue = metadata_queue() if queue is None else queue
     mt_count = defaultdict(int) if mt_count is None else mt_count
     intids = component.getUtility(IIntIds) if intids is None else intids
     for iid, mimeType, obj in find_principal_metadata_objects(principal, accept, intids):
-        try:
-            iid = get_iid(obj, intids=intids)
-            if iid is not None:
-                queue.add(iid)
-        except TypeError:
-            pass
-        else:
+        iid = get_iid(obj, intids=intids)
+        if iid is not None:
             result += 1
+            queue_add(iid)
             mt_count[mimeType] = mt_count[mimeType] + 1
     return result, mt_count
 
@@ -61,7 +56,6 @@ def reindex(usernames=(), all_users=False, system=False, accept=(), intids=None)
 
     total = 0
     now = time.time()
-    queue = metadata_queue()
     mt_count = defaultdict(int)
     intids = component.getUtility(IIntIds) if intids is None else intids
 
@@ -71,7 +65,6 @@ def reindex(usernames=(), all_users=False, system=False, accept=(), intids=None)
             continue
         count, _ = reindex_principal(user,
                                      accept,
-                                     queue=queue,
                                      intids=intids,
                                      mt_count=mt_count)
         total += count
@@ -79,7 +72,6 @@ def reindex(usernames=(), all_users=False, system=False, accept=(), intids=None)
     if system:
         count, _ = reindex_principal(system_user(),
                                      accept,
-                                     queue=queue,
                                      intids=intids,
                                      mt_count=mt_count)
         total += count
