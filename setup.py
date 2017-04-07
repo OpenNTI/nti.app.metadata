@@ -37,6 +37,7 @@ setup(
     namespace_packages=['nti', 'nti.app'],
     install_requires=[
         'setuptools',
+        'nti.async',
         'nti.metadata'
     ],
     entry_points=entry_points
