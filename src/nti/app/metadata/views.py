@@ -131,6 +131,8 @@ class GetMimeTypesView(AbstractAuthenticatedView):
                 continue
             mime_types.update(index.values_to_documents.keys())
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         items = result[ITEMS] = sorted(mime_types)
         result[ITEM_COUNT] = result[TOTAL] = len(items)
         return result
@@ -219,6 +221,8 @@ class ReindexView(AbstractAuthenticatedView,
         catalogs = [x for _, x in component.getUtilitiesFor(catalog_interface)]
 
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         items = result[ITEMS] = {}
         for ntiid in set(ntiids):
             obj = find_object_with_ntiid(ntiid)
@@ -265,6 +269,8 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
                 except (TypeError, POSError):
                     pass
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         result[TOTAL] = total
         result[ITEM_COUNT] = indexed
         return result
@@ -414,6 +420,8 @@ class UGDView(AbstractAuthenticatedView):
         mime_types = self.parse_mime_types(mime_types)
 
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         uids = self.get_ids(user, ntiid, mime_types)
         items = result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
         result[ITEM_COUNT] = result[TOTAL] = len(items)
@@ -435,6 +443,8 @@ class QueueJobsView(AbstractAuthenticatedView):
     def __call__(self):
         total = 0
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         items = result[ITEMS] = {}
         for name in QUEUE_NAMES:
             queue = get_job_queue(name)
