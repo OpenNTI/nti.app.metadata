@@ -431,8 +431,8 @@ class UGDView(AbstractAuthenticatedView):
 # queue views
 
 
-@view_config(name='MetaJobs')
-@view_config(name='meta_jobs')
+@view_config(name='Jobs')
+@view_config(name='jobs')
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
                request_method='GET',
