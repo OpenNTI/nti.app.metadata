@@ -110,7 +110,6 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         except (ImportError, AttributeError):
             pass
         except Exception:
-            print(to_external_oid(index))
             raise
 
     def _process_catalog(catalog):
@@ -131,9 +130,9 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                     _check_btrees(name, index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
-                                             docids, 
-                                             missing, 
-                                             broken, 
+                                             docids,
+                                             missing,
+                                             broken,
                                              seen)
                     if processed:
                         logger.info("%s record(s) unindexed. Source %s,%s",
@@ -143,8 +142,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         if ITopicFilteredSet.providedBy(filter_index):
                             _check_btrees(name, filter_index)
                             docids = list(filter_index.getIds())
-                            processed = _process_ids(catalogs, 
-                                                     docids, 
+                            processed = _process_ids(catalogs,
+                                                     docids,
                                                      missing,
                                                      broken,
                                                      seen)
