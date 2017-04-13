@@ -91,7 +91,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 pass
         return result
 
-    def _check_btrees(index, display=False):
+    def _check_btrees(name, index, display=False):
+        print("checking", name, index)
         index = getattr(index, 'index', index)
         try:
             import BTrees.check
@@ -110,7 +111,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         for name, index in catalog.items():
             try:
                 if IIndexValues.providedBy(index):
-                    _check_btrees(index)
+                    _check_btrees(name, index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids,
@@ -121,7 +122,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
                 elif IKeywordIndex.providedBy(index):
-                    _check_btrees(index)
+                    _check_btrees(name, index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids, 
@@ -134,7 +135,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 elif isinstance(index, TopicIndex):
                     for filter_index in index._filters.values():
                         if ITopicFilteredSet.providedBy(filter_index):
-                            _check_btrees(filter_index)
+                            _check_btrees(name, filter_index)
                             docids = list(filter_index.getIds())
                             processed = _process_ids(catalogs, 
                                                      docids, 
