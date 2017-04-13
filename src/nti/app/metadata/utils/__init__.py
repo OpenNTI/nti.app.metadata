@@ -92,7 +92,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         return result
 
     def _check_btrees(name, index, display=False):
-        print("checking", name, index)
+        print("checking", name, index.__class.__.__name__)
         index = getattr(index, 'index', index)
         try:
             import BTrees.check
