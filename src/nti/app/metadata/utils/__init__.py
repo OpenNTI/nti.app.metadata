@@ -91,10 +91,26 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 pass
         return result
 
+    def _check_btrees(index, display=False):
+        index = getattr(index, 'index', index)
+        try:
+            import BTrees.check
+            for name in ('values_to_documents', 'documents_to_values'):
+                item = getattr(index, name, None)
+                if item is not None:
+                    if hasattr(item, "_check"):
+                        item._check()
+                    BTrees.check.check(item)
+                    if display:
+                        BTrees.check.display(item)
+        except (ImportError, AttributeError):
+            pass
+
     def _process_catalog(catalog):
         for name, index in catalog.items():
             try:
                 if IIndexValues.providedBy(index):
+                    _check_btrees(index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids,
@@ -105,6 +121,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
                 elif IKeywordIndex.providedBy(index):
+                    _check_btrees(index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids, 
@@ -117,6 +134,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 elif isinstance(index, TopicIndex):
                     for filter_index in index._filters.values():
                         if ITopicFilteredSet.providedBy(filter_index):
+                            _check_btrees(filter_index)
                             docids = list(filter_index.getIds())
                             processed = _process_ids(catalogs, 
                                                      docids, 
@@ -126,7 +144,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                             if processed:
                                 logger.info("%s record(s) unindexed. Source %s,%s",
                                             len(processed), name, catalog)
-            except (POSError, TypeError):
+            except (POSError, TypeError) as e:
+                print(e)
                 logger.error('Errors getting ids from index "%s" (%s) in catalog %s',
                              name, index, catalog)
 
