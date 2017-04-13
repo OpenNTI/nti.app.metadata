@@ -27,6 +27,8 @@ from nti.contentlibrary.indexed_data import get_library_catalog
 
 from nti.externalization.interfaces import LocatedExternalDict
 
+from nti.externalization.oids import to_external_oid
+
 from nti.metadata import get_iid
 from nti.metadata import get_principal_metadata_objects
 
@@ -99,6 +101,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             for name in ('values_to_documents', 'documents_to_values'):
                 item = getattr(index, name, None)
                 if item is not None:
+                    print("\t", name, to_external_oid(item))
                     if hasattr(item, "_check"):
                         item._check()
                     BTrees.check.check(item)
@@ -106,6 +109,9 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         BTrees.check.display(item)
         except (ImportError, AttributeError):
             pass
+        except Exception:
+            print(to_external_oid(index))
+            raise
 
     def _process_catalog(catalog):
         for name, index in catalog.items():
