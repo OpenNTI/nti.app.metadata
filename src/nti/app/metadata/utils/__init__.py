@@ -94,14 +94,14 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         return result
 
     def _check_btrees(name, index, display=False):
-        print("checking", name, index.__class__)
+        logger.info("Checking %s, %s", name, index.__class__)
         index = getattr(index, 'index', index)
         try:
             import BTrees.check
             for name in ('values_to_documents', 'documents_to_values'):
                 item = getattr(index, name, None)
                 if item is not None:
-                    print("\t", name, to_external_oid(item))
+                    logger.info("---> %s, %s", name, to_external_oid(item))
                     if hasattr(item, "_check"):
                         item._check()
                     BTrees.check.check(item)
@@ -109,8 +109,9 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         BTrees.check.display(item)
         except (ImportError, AttributeError):
             pass
-        except Exception:
-            raise
+        except Exception as e:
+            logger.exception(e)
+            raise e
 
     def _process_catalog(catalog):
         for name, index in catalog.items():
