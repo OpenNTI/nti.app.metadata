@@ -101,7 +101,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             for name in ('values_to_documents', 'documents_to_values'):
                 item = getattr(index, name, None)
                 if item is not None:
-                    logger.info("---> %s, %s", name, to_external_oid(item))
+                    logger.info("---------> %s, %s", name, to_external_oid(item))
                     if hasattr(item, "_check"):
                         item._check()
                     BTrees.check.check(item)
@@ -114,7 +114,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             raise e
 
     def _process_catalog(catalog):
-        logger.info("---> Processing %s", catalog.__class__)
+        logger.info("Processing %s", catalog.__class__)
         for name, index in catalog.items():
             try:
                 if IIndexValues.providedBy(index):
