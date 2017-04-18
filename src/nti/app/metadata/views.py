@@ -318,7 +318,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
                renderer='rest',
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
-class UnindexView(AbstractAuthenticatedView):
+class UnindexDocView(AbstractAuthenticatedView):
 
     @Lazy
     def intids(self):
@@ -358,7 +358,7 @@ class UnindexView(AbstractAuthenticatedView):
                renderer='rest',
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
-class IndexView(AbstractAuthenticatedView):
+class IndexDocView(AbstractAuthenticatedView):
 
     @Lazy
     def intids(self):
