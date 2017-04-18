@@ -384,7 +384,7 @@ class IndexDocView(AbstractAuthenticatedView):
         for name, catalog in self.catalogs.items():
             __traceback_info = name, catalog
             logger.warn("Indexing %s to %s", doc_id, name)
-            catalog.index_doc(doc_id. obj)
+            catalog.index_doc(doc_id, obj)
         return hexc.HTTPNoContent()
 
 
