@@ -316,6 +316,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
 @view_config(name='unindex_doc')
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
+               request_method='POST',
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
 class UnindexDocView(AbstractAuthenticatedView):
@@ -356,6 +357,7 @@ class UnindexDocView(AbstractAuthenticatedView):
 @view_config(name='index_doc')
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
+               request_method='POST',
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
 class IndexDocView(AbstractAuthenticatedView):
@@ -384,7 +386,10 @@ class IndexDocView(AbstractAuthenticatedView):
         for name, catalog in self.catalogs.items():
             __traceback_info = name, catalog
             logger.warn("Indexing %s to %s", doc_id, name)
-            catalog.index_doc(doc_id, obj)
+            if IMetadataCatalog.providedBy(catalog):
+                catalog.force_index_doc(doc_id, obj)
+            else:
+                catalog.index_doc(doc_id, obj)
         return hexc.HTTPNoContent()
 
 

@@ -9,6 +9,7 @@ __docformat__ = "restructuredtext en"
 
 from hamcrest import is_
 from hamcrest import none
+from hamcrest import is_in
 from hamcrest import is_not
 from hamcrest import contains
 from hamcrest import has_value
@@ -19,7 +20,10 @@ from hamcrest import greater_than_or_equal_to
 
 import json
 
+from zope import component
 from zope import interface
+
+from zope.intid.interfaces import IIntIds
 
 from ZODB.interfaces import IBroken
 
@@ -28,6 +32,8 @@ from nti.contentfragments.interfaces import IPlainTextContentFragment
 from nti.dataserver.contenttypes import Note
 
 from nti.externalization.oids import to_external_ntiid_oid
+
+from nti.metadata import dataserver_metadata_catalog
 
 from nti.ntiids.ntiids import make_ntiid
 
@@ -52,9 +58,8 @@ class TestAdminViews(ApplicationLayerTest):
             note.title = IPlainTextContentFragment(title)
         note.body = [unicode(msg)]
         note.creator = owner
-        note.containerId = containerId or make_ntiid(
-            nttype='bleach',
-            specific='manga')
+        note.containerId = containerId \
+                        or make_ntiid(nttype='bleach', specific='manga')
         return note
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
@@ -97,6 +102,35 @@ class TestAdminViews(ApplicationLayerTest):
         assert_that(res.json_body,
                     has_entries('Items', contains(u"application/vnd.nextthought.note"),
                                 'Total', is_(greater_than_or_equal_to(1))))
+
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_unindex_index_doc(self):
+        username = 'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'As Nodt Fear', ichigo.username)
+            ichigo.addContainedObject(note)
+            intids = component.getUtility(IIntIds)
+            doc_id = intids.queryId(note)
+
+        testapp = TestApp(self.app)
+        testapp.post('/dataserver2/metadata/unindex_doc/%s' % doc_id,
+                     extra_environ=self._make_extra_environ(),
+                     status=204)
+
+        with mock_dataserver.mock_db_trans(self.ds):
+            catalog = dataserver_metadata_catalog()
+            index = catalog['mimeType']
+            assert_that(doc_id, is_not(is_in(index.ids())))
+
+        testapp.post('/dataserver2/metadata/index_doc/%s' % doc_id,
+                     extra_environ=self._make_extra_environ(),
+                     status=204)
+
+        with mock_dataserver.mock_db_trans(self.ds):
+            catalog = dataserver_metadata_catalog()
+            index = catalog['mimeType']
+            assert_that(doc_id, is_in(index.ids()))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_reindex_user_objects(self):
