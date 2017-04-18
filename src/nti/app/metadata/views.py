@@ -312,8 +312,8 @@ class CheckIndicesView(AbstractAuthenticatedView,
         return result
 
 
-@view_config(name='Unindex')
-@view_config(name='unindex')
+@view_config(name='UnindexDoc')
+@view_config(name='unindex_doc')
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
                context=MetadataPathAdapter,
@@ -349,6 +349,42 @@ class UnindexView(AbstractAuthenticatedView):
             __traceback_info = name, catalog
             logger.warn("Unindexing %s from %s", doc_id, name)
             catalog.unindex_doc(doc_id)
+        return hexc.HTTPNoContent()
+
+
+@view_config(name='IndexDoc')
+@view_config(name='index_doc')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class IndexView(AbstractAuthenticatedView):
+
+    @Lazy
+    def intids(self):
+        return component.getUtility(IIntIds)
+
+    @Lazy
+    def catalogs(self):
+        result = {name: c for name, c in component.getUtilitiesFor(ICatalog)}
+        return result
+
+    def __call__(self):
+        request = self.request
+        doc_id = request.subpath[0] if request.subpath else ''
+        try:
+            doc_id = int(doc_id)
+        except (ValueError, TypeError):
+            raise hexc.HTTPUnprocessableEntity("Invalid/Missing document id")
+
+        obj = self.intids.queryObject(doc_id)
+        if obj is None:
+            raise hexc.HTTPNotFound()
+
+        for name, catalog in self.catalogs.items():
+            __traceback_info = name, catalog
+            logger.warn("Indexing %s to %s", doc_id, name)
+            catalog.index_doc(doc_id. obj)
         return hexc.HTTPNoContent()
 
 
