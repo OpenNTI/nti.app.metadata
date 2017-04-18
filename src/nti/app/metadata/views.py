@@ -105,7 +105,7 @@ def username_search(search_term):
     dataserver = component.getUtility(IDataserver)
     users = IShardLayout(dataserver).users_folder
     usernames = list(users.iterkeys(min_inclusive,
-                                    max_exclusive, 
+                                    max_exclusive,
                                     excludemax=True))
     return usernames
 
@@ -310,6 +310,46 @@ class CheckIndicesView(AbstractAuthenticatedView,
                                test_broken=test_broken,
                                intids=self.intids)
         return result
+
+
+@view_config(name='Unindex')
+@view_config(name='unindex')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class UnindexView(AbstractAuthenticatedView):
+
+    @Lazy
+    def intids(self):
+        return component.getUtility(IIntIds)
+
+    @Lazy
+    def catalogs(self):
+        result = {name: c for name, c in component.getUtilitiesFor(ICatalog)}
+        try:
+            from nti.contentlibrary.indexed_data import get_library_catalog
+            result['library_catalog'] = get_library_catalog()
+        except ImportError:
+            pass
+        return result
+
+    def __call__(self):
+        request = self.request
+        doc_id = request.subpath[0] if request.subpath else ''
+        try:
+            doc_id = int(doc_id)
+        except (ValueError, TypeError):
+            raise hexc.HTTPUnprocessableEntity("Invalid/Missing document id")
+
+        if doc_id not in self.intids:
+            raise hexc.HTTPNotFound()
+
+        for name, catalog in self.catalogs.items():
+            __traceback_info = name, catalog
+            logger.warn("Unindexing %s from %s", doc_id, name)
+            catalog.unindex_doc(doc_id)
+        return hexc.HTTPNoContent()
 
 
 @view_config(name='UserUGD')
