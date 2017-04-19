@@ -30,7 +30,8 @@ def _process_args(args):
         catalog_interface = IMetadataCatalog
 
     result = check_indices(catalog_interface=catalog_interface,
-                           test_broken=args.broken)
+                           test_broken=args.broken,
+                           inspect_btrees=args.check)
     if args.verbose:
         pprint.pprint(result)
     return result
@@ -44,7 +45,10 @@ def main():
     arg_parser.add_argument('-a', '--all', help="Include all catalogs",
                             action='store_true',
                             dest='all')
-    arg_parser.add_argument('-b', '--broken', help="Tesst for broken objects",
+    arg_parser.add_argument('-c', '--check', help="Check BTrees",
+                            action='store_true',
+                            dest='check')
+    arg_parser.add_argument('-b', '--broken', help="Test for broken objects",
                             action='store_true',
                             dest='broken')
 

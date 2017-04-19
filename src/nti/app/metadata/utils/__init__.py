@@ -56,7 +56,7 @@ def find_principal_metadata_objects(principal, accept=(), intids=None):
 
 
 def check_indices(catalog_interface=IMetadataCatalog, intids=None,
-                  test_broken=False):
+                  test_broken=False, inspect_btrees=False):
     seen = set()
     broken = dict()
     result = LocatedExternalDict()
@@ -93,7 +93,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 pass
         return result
 
-    def _check_btrees(name, index, display=False):
+    def _check_btrees(name, index):
         logger.info("---> Checking %s, %s", name, index.__class__)
         index = getattr(index, 'index', index)
         try:
@@ -105,8 +105,6 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                     if hasattr(item, "_check"):
                         item._check()
                     BTrees.check.check(item)
-                    if display:
-                        BTrees.check.display(item)
         except (ImportError, AttributeError):
             pass
         except Exception as e:
@@ -118,7 +116,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         for name, index in catalog.items():
             try:
                 if IIndexValues.providedBy(index):
-                    _check_btrees(name, index)
+                    if inspect_btrees:
+                        _check_btrees(name, index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids,
@@ -129,7 +128,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
                 elif IKeywordIndex.providedBy(index):
-                    _check_btrees(name, index)
+                    if inspect_btrees:
+                        _check_btrees(name, index)
                     docids = list(index.ids())
                     processed = _process_ids(catalogs,
                                              docids,

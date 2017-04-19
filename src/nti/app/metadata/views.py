@@ -302,13 +302,15 @@ class CheckIndicesView(AbstractAuthenticatedView,
         values = self.readInput()
         all_catalog = is_true(values.get('all'))
         test_broken = is_true(values.get('broken'))
+        check_btrees = is_true(values.get('check'))
         if all_catalog:
             catalog_interface = ICatalog
         else:
             catalog_interface = IMetadataCatalog
         result = check_indices(catalog_interface=catalog_interface,
                                test_broken=test_broken,
-                               intids=self.intids)
+                               intids=self.intids,
+                               inspect_btrees=check_btrees)
         return result
 
 
