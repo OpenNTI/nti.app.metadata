@@ -112,7 +112,9 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             raise e
 
     def _process_catalog(catalog):
-        logger.info("Processing %s", catalog.__class__)
+        logger.info("Processing %s-[%s]", 
+                    getattr(catalog, '__name__', None),
+                    catalog.__class__)
         for name, index in catalog.items():
             try:
                 if IIndexValues.providedBy(index):
