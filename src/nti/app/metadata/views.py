@@ -16,6 +16,8 @@ from requests.structures import CaseInsensitiveDict
 from zope import component
 from zope import interface
 
+from zope.cachedescriptors.property import Lazy
+
 from zope.catalog.interfaces import ICatalog
 
 from zope.container.contained import Contained
@@ -70,8 +72,6 @@ from nti.metadata import dataserver_metadata_catalog
 from nti.metadata.processing import get_job_queue
 
 from nti.ntiids.ntiids import find_object_with_ntiid
-
-from nti.property.property import Lazy
 
 from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IMetadataCatalog
