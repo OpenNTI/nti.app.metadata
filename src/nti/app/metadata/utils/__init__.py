@@ -25,12 +25,12 @@ from ZODB.POSException import POSError
 
 from nti.contentlibrary.indexed_data import get_library_catalog
 
+from nti.dataserver.metadata.utils import get_iid
+from nti.dataserver.metadata.utils import get_principal_metadata_objects
+
 from nti.externalization.interfaces import LocatedExternalDict
 
 from nti.externalization.oids import to_external_oid
-
-from nti.metadata import get_iid
-from nti.metadata import get_principal_metadata_objects
 
 from nti.zope_catalog.catalog import isBroken
 

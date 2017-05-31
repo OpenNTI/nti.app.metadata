@@ -31,9 +31,9 @@ from nti.contentfragments.interfaces import IPlainTextContentFragment
 
 from nti.dataserver.contenttypes import Note
 
-from nti.externalization.oids import to_external_ntiid_oid
+from nti.dataserver.metadata.index import get_metadata_catalog
 
-from nti.metadata import dataserver_metadata_catalog
+from nti.externalization.oids import to_external_ntiid_oid
 
 from nti.ntiids.ntiids import make_ntiid
 
@@ -45,7 +45,7 @@ from nti.app.testing.decorators import WithSharedApplicationMockDSHandleChanges
 
 from nti.appserver.tests.test_application import TestApp
 
-import nti.dataserver.tests.mock_dataserver as mock_dataserver
+from nti.dataserver.tests import mock_dataserver
 
 
 class TestAdminViews(ApplicationLayerTest):
@@ -119,7 +119,7 @@ class TestAdminViews(ApplicationLayerTest):
                      status=204)
 
         with mock_dataserver.mock_db_trans(self.ds):
-            catalog = dataserver_metadata_catalog()
+            catalog = get_metadata_catalog()
             index = catalog['mimeType']
             assert_that(doc_id, is_not(is_in(index.ids())))
 
@@ -128,7 +128,7 @@ class TestAdminViews(ApplicationLayerTest):
                      status=204)
 
         with mock_dataserver.mock_db_trans(self.ds):
-            catalog = dataserver_metadata_catalog()
+            catalog = get_metadata_catalog()
             index = catalog['mimeType']
             assert_that(doc_id, is_in(index.ids()))
 

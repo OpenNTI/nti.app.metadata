@@ -51,10 +51,11 @@ from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 from nti.dataserver.interfaces import IUserGeneratedData
 
-from nti.dataserver.metadata_index import IX_CREATOR
-from nti.dataserver.metadata_index import IX_MIMETYPE
-from nti.dataserver.metadata_index import IX_SHAREDWITH
-from nti.dataserver.metadata_index import IX_CONTAINERID
+from nti.dataserver.metadata.index import IX_CREATOR
+from nti.dataserver.metadata.index import IX_MIMETYPE
+from nti.dataserver.metadata.index import IX_SHAREDWITH
+from nti.dataserver.metadata.index import IX_CONTAINERID
+from nti.dataserver.metadata.index import get_metadata_catalog
 
 from nti.dataserver.users import User
 
@@ -67,7 +68,6 @@ from nti.metadata import QUEUE_NAMES
 
 from nti.metadata import queue_add
 from nti.metadata import metadata_catalogs
-from nti.metadata import dataserver_metadata_catalog
 
 from nti.metadata.processing import get_job_queue
 
@@ -253,7 +253,7 @@ class IndexUserGeneratedDataView(AbstractAuthenticatedView,
         count = 0
         indexed = 0
         intids = component.getUtility(IIntIds)
-        catalog = dataserver_metadata_catalog()
+        catalog = get_metadata_catalog()
         if catalog is not None:
             mimeTypeIdx = catalog[IX_MIMETYPE]
             total = len(mimeTypeIdx.ids())
@@ -420,7 +420,7 @@ class UGDView(AbstractAuthenticatedView):
 
     @Lazy
     def catalog(self):
-        return dataserver_metadata_catalog()
+        return get_metadata_catalog()
 
     def get_owned(self, user, ntiid, mime_types=()):
         username = user.username
