@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 # disable: accessing protected members, too many methods
@@ -59,12 +59,12 @@ class TestAdminViews(ApplicationLayerTest):
         note.body = [unicode(msg)]
         note.creator = owner
         note.containerId = containerId \
-                        or make_ntiid(nttype='bleach', specific='manga')
+                        or make_ntiid(nttype=u'bleach', specific=u'manga')
         return note
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_check_indices(self):
-        username = 'ichigo@bleach.com'
+        username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
             note = self._create_note(u'As Nodt Fear', ichigo.username)
@@ -75,7 +75,7 @@ class TestAdminViews(ApplicationLayerTest):
             interface.alsoProvides(note, IBroken)
 
         testapp = TestApp(self.app)
-        res = testapp.post('/dataserver2/metadata/check_indices',
+        res = testapp.post('/dataserver2/metadata/@@check_indices',
                            json.dumps({'broken': True}),
                            extra_environ=self._make_extra_environ(),
                            status=200)
@@ -88,14 +88,14 @@ class TestAdminViews(ApplicationLayerTest):
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_mime_types(self):
-        username = 'ichigo@bleach.com'
+        username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
             note = self._create_note(u'As Nodt Fear', ichigo.username)
             ichigo.addContainedObject(note)
 
         testapp = TestApp(self.app)
-        res = testapp.get('/dataserver2/metadata/mime_types',
+        res = testapp.get('/dataserver2/metadata/@@mime_types',
                           extra_environ=self._make_extra_environ(),
                           status=200)
 
@@ -105,7 +105,7 @@ class TestAdminViews(ApplicationLayerTest):
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_unindex_index_doc(self):
-        username = 'ichigo@bleach.com'
+        username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
             note = self._create_note(u'As Nodt Fear', ichigo.username)
@@ -134,7 +134,7 @@ class TestAdminViews(ApplicationLayerTest):
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_reindex_user_objects(self):
-        username = 'ichigo@bleach.com'
+        username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
             note = self._create_note(u'As Nodt Fear', ichigo.username)
@@ -154,7 +154,7 @@ class TestAdminViews(ApplicationLayerTest):
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_reindex(self):
-        username = 'ichigo@bleach.com'
+        username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
             note = self._create_note(u'As Nodt Fear', ichigo.username)
@@ -162,7 +162,7 @@ class TestAdminViews(ApplicationLayerTest):
             ntiid = to_external_ntiid_oid(note)
 
         testapp = TestApp(self.app)
-        res = testapp.post('/dataserver2/metadata/reindex',
+        res = testapp.post('/dataserver2/metadata/@@reindex',
                            json.dumps({'all': True,
                                        'ntiid': ntiid}),
                            extra_environ=self._make_extra_environ(),

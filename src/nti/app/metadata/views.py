@@ -218,7 +218,7 @@ class ReindexView(AbstractAuthenticatedView,
             catalog_interface = ICatalog
         else:
             catalog_interface = IMetadataCatalog
-        catalogs = [x for _, x in component.getUtilitiesFor(catalog_interface)]
+        catalogs = list(component.getAllUtilitiesRegisteredFor(catalog_interface))
 
         result = LocatedExternalDict()
         result.__name__ = self.request.view_name
