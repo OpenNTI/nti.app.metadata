@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -18,7 +18,7 @@ from zope.intid.interfaces import IIntIds
 
 from zope.security.management import system_user
 
-from nti.app.metadata import find_principal_metadata_objects
+from nti.app.metadata.utils import find_principal_metadata_objects
 
 from nti.dataserver.interfaces import IUser
 from nti.dataserver.interfaces import IDataserver

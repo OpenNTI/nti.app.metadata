@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -38,7 +38,7 @@ class Constructor(Processor):
 
     def create_context(self, env_dir, args):
         slugs = args.slugs
-        context = create_context(env_dir, 
+        context = create_context(env_dir,
                                  slugs=slugs,
                                  plugins=slugs,
                                  with_library=True)
@@ -47,7 +47,7 @@ class Constructor(Processor):
 
     def process_args(self, args):
         setattr(args, 'redis', True)
-        setattr(args, 'library', True) 
+        setattr(args, 'library', True)
         setattr(args, 'trx_retries', 9)
         setattr(args, 'max_sleep_time', 30)
         setattr(args, 'queue_names', QUEUE_NAMES)
@@ -56,6 +56,7 @@ class Constructor(Processor):
 
 def main():
     return Constructor()()
+
 
 if __name__ == '__main__':
     main()

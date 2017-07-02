@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -36,6 +36,8 @@ from pyramid.view import view_config
 from pyramid.view import view_defaults
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
+
+from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
@@ -73,7 +75,6 @@ from nti.metadata.processing import get_job_queue
 
 from nti.ntiids.ntiids import find_object_with_ntiid
 
-from nti.zope_catalog.catalog import ResultSet
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
 ITEMS = StandardExternalFields.ITEMS
@@ -96,7 +97,7 @@ class MetadataPathAdapter(Contained):
 
 def _make_min_max_btree_range(search_term):
     min_inclusive = search_term  # start here
-    max_exclusive = search_term[0:-1] + unichr(ord(search_term[-1]) + 1)
+    max_exclusive = search_term[0:-1] + six.unichr(ord(search_term[-1]) + 1)
     return min_inclusive, max_exclusive
 
 
@@ -211,14 +212,21 @@ class ReindexView(AbstractAuthenticatedView,
         if isinstance(ntiids, six.string_types):
             ntiids = ntiids.split()
         if not ntiids:
-            raise hexc.HTTPUnprocessableEntity('Must specify a valid NTIID.')
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                'message': u"Must specify a valid NTIID.",
+                                'field': 'ntiid',
+                             },
+                             None)
 
         all_catalog = is_true(values.get('all'))
         if all_catalog:
             catalog_interface = ICatalog
         else:
             catalog_interface = IMetadataCatalog
-        catalogs = list(component.getAllUtilitiesRegisteredFor(catalog_interface))
+        catalogs = component.getAllUtilitiesRegisteredFor(catalog_interface)
+        catalogs = list(catalogs)
 
         result = LocatedExternalDict()
         result.__name__ = self.request.view_name
@@ -289,9 +297,9 @@ class CheckIndicesView(AbstractAuthenticatedView,
     def intids(self):
         return component.getUtility(IIntIds)
 
-    def readInput(self):
+    def readInput(self, value=None):
         if self.request.body:
-            values = super(CheckIndicesView, self).readInput()
+            values = super(CheckIndicesView, self).readInput(value)
             result = CaseInsensitiveDict(values)
         else:
             values = self.request.params
@@ -329,10 +337,13 @@ class UnindexDocView(AbstractAuthenticatedView):
 
     @Lazy
     def catalogs(self):
-        result = {name: c for name, c in component.getUtilitiesFor(ICatalog)}
+        result = {
+            c.__name__: c for c in component.getAllUtilitiesRegisteredFor(ICatalog)
+        }
         try:
             from nti.contentlibrary.indexed_data import get_library_catalog
-            result['library_catalog'] = get_library_catalog()
+            catalog = get_library_catalog()
+            result[catalog.__name__] = catalog
         except ImportError:
             pass
         return result
@@ -343,7 +354,12 @@ class UnindexDocView(AbstractAuthenticatedView):
         try:
             doc_id = int(doc_id)
         except (ValueError, TypeError):
-            raise hexc.HTTPUnprocessableEntity("Invalid/Missing document id")
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                'message': u"Invalid/Missing document id.",
+                             },
+                             None)
 
         if doc_id not in self.intids:
             raise hexc.HTTPNotFound()
@@ -370,7 +386,9 @@ class IndexDocView(AbstractAuthenticatedView):
 
     @Lazy
     def catalogs(self):
-        result = {name: c for name, c in component.getUtilitiesFor(ICatalog)}
+        result = {
+            c.__name__: c for c in component.getAllUtilitiesRegisteredFor(ICatalog)
+        }
         return result
 
     def __call__(self):
@@ -379,7 +397,12 @@ class IndexDocView(AbstractAuthenticatedView):
         try:
             doc_id = int(doc_id)
         except (ValueError, TypeError):
-            raise hexc.HTTPUnprocessableEntity("Invalid/Missing document id")
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                'message': u"Invalid/Missing document id.",
+                             },
+                             None)
 
         obj = self.intids.queryObject(doc_id)
         if obj is None:
@@ -415,7 +438,7 @@ class UGDView(AbstractAuthenticatedView):
             mime_types = ()
         elif mime_types:
             mime_types = {e.strip().lower() for e in mime_types}
-            mime_types.discard(u'')
+            mime_types.discard('')
         return tuple(mime_types) if mime_types else ()
 
     @Lazy
@@ -484,7 +507,13 @@ class UGDView(AbstractAuthenticatedView):
         result = self.catalog.family.IF.union(owned, shared)
         return result
 
-    def readInput(self, value=None):
+    def query_objects(self, uids=()):
+        for doc_id in uids or ():
+            obj = self.intids.queryObject(doc_id)
+            if obj is not None:
+                yield obj
+
+    def readInput(self):
         result = CaseInsensitiveDict(self.request.params)
         return result
 
@@ -493,11 +522,23 @@ class UGDView(AbstractAuthenticatedView):
         username = values.get('user') or values.get('username')
         user = User.get_user(username or '')
         if user is None:
-            raise hexc.HTTPUnprocessableEntity('Provide a valid user')
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                'message': u"'Provide a valid user.",
+                                'field': 'username',
+                             },
+                             None)
 
         ntiid = values.get('ntiid') or values.get('containerId')
         if not ntiid:
-            raise hexc.HTTPUnprocessableEntity('Provide a valid container')
+            raise_json_error(self.request,
+                             hexc.HTTPUnprocessableEntity,
+                             {
+                                'message': u"'Provide a valid container.",
+                                'field': 'ntiid',
+                             },
+                             None)
 
         mime_types = values.get('mime_types') or values.get('mimeTypes') or u''
         mime_types = self.parse_mime_types(mime_types)
@@ -506,7 +547,7 @@ class UGDView(AbstractAuthenticatedView):
         result.__name__ = self.request.view_name
         result.__parent__ = self.request.context
         uids = self.get_ids(user, ntiid, mime_types)
-        items = result[ITEMS] = [x for x in ResultSet(uids, self.intids, True)]
+        items = result[ITEMS] = list(self.query_objects(uids))
         result[ITEM_COUNT] = result[TOTAL] = len(items)
         return result
 

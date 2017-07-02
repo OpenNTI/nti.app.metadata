@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -39,7 +39,7 @@ def _process_args(args):
 
 def main():
     arg_parser = argparse.ArgumentParser(description="Metadata index checker")
-    arg_parser.add_argument('-v', '--verbose', help="Be verbose", 
+    arg_parser.add_argument('-v', '--verbose', help="Be verbose",
                             action='store_true',
                             dest='verbose')
     arg_parser.add_argument('-a', '--all', help="Include all catalogs",
@@ -66,6 +66,7 @@ def main():
                         context=context,
                         minimal_ds=True,
                         function=lambda: _process_args(args))
+
 
 if __name__ == '__main__':
     main()

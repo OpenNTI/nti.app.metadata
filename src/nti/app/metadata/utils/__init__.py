@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -62,7 +62,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
     result = LocatedExternalDict()
     missing = result['Missing'] = set()
     intids = component.getUtility(IIntIds) if intids is None else intids
-    catalogs = [c for _, c in component.getUtilitiesFor(catalog_interface)]
+    catalogs = list(component.getAllUtilitiesRegisteredFor(catalog_interface))
     catalogs.append(get_library_catalog())
 
     def _unindex(catalogs, docid):
@@ -101,7 +101,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             for name in ('values_to_documents', 'documents_to_values'):
                 item = getattr(index, name, None)
                 if item is not None:
-                    logger.info("---------> %s, %s", name, to_external_oid(item))
+                    logger.info("---------> %s, %s", name,
+                                to_external_oid(item))
                     if hasattr(item, "_check"):
                         item._check()
                     BTrees.check.check(item)
@@ -112,7 +113,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             raise e
 
     def _process_catalog(catalog):
-        logger.info("Processing %s-[%s]", 
+        logger.info("Processing %s-[%s]",
                     getattr(catalog, '__name__', None),
                     catalog.__class__)
         for name, index in catalog.items():

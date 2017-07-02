@@ -27,6 +27,8 @@ from zope.intid.interfaces import IIntIds
 
 from ZODB.interfaces import IBroken
 
+from nti.base._compat import text_
+
 from nti.contentfragments.interfaces import IPlainTextContentFragment
 
 from nti.dataserver.contenttypes import Note
@@ -56,7 +58,7 @@ class TestAdminViews(ApplicationLayerTest):
         note = Note()
         if title:
             note.title = IPlainTextContentFragment(title)
-        note.body = [unicode(msg)]
+        note.body = [text_(msg)]
         note.creator = owner
         note.containerId = containerId \
                         or make_ntiid(nttype=u'bleach', specific=u'manga')
@@ -168,5 +170,24 @@ class TestAdminViews(ApplicationLayerTest):
                            extra_environ=self._make_extra_environ(),
                            status=200)
 
+        assert_that(res.json_body,
+                    has_entries('Total', 1))
+        
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_usg(self):
+        username = u'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'Kurosaki Ichigo', ichigo.username)
+            ichigo.addContainedObject(note)
+            ntiid = note.containerId
+
+        testapp = TestApp(self.app)
+        res = testapp.get('/dataserver2/metadata/@@UserUGD',
+                          {'username': username,
+                           'ntiid': ntiid},
+                           extra_environ=self._make_extra_environ(),
+                           status=200)
+        
         assert_that(res.json_body,
                     has_entries('Total', 1))

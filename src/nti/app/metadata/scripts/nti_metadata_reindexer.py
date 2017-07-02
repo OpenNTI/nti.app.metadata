@@ -4,7 +4,7 @@
 .. $Id$
 """
 
-from __future__ import print_function, unicode_literals, absolute_import, division
+from __future__ import print_function, absolute_import, division
 __docformat__ = "restructuredtext en"
 
 logger = __import__('logging').getLogger(__name__)
@@ -55,7 +55,7 @@ def main():
         raise IOError("Invalid dataserver environment root directory")
 
     context = create_context(env_dir, True)
-    conf_packages = ('nti.appserver', 'nti.app.metadata')
+    conf_packages = ('nti.appserver',)
 
     run_with_dataserver(environment_dir=env_dir,
                         xmlconfig_packages=conf_packages,
@@ -63,6 +63,7 @@ def main():
                         context=context,
                         minimal_ds=True,
                         function=lambda: _process_args(args))
+
 
 if __name__ == '__main__':
     main()
