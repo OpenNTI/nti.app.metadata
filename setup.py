@@ -1,44 +1,51 @@
 import codecs
 from setuptools import setup, find_packages
 
-VERSION = '0.0.0'
-
 entry_points = {
     "z3c.autoinclude.plugin": [
         'target = nti.app',
     ],
     "console_scripts": [
-        "nti_metadata_processor = nti.app.metadata.utils.constructor:main",
         "nti_check_indices = nti.app.metadata.scripts.nti_check_indices:main",
+        "nti_metadata_processor = nti.app.metadata.scripts.nti_metadata_processor:main",
         "nti_metadata_reindexer = nti.app.metadata.scripts.nti_metadata_reindexer:main",
     ],
 }
 
+
+def _read(fname):
+    with codecs.open(fname, encoding='utf-8') as f:
+        return f.read()
+
+
 setup(
     name='nti.app.metadata',
-    version=VERSION,
+    version=_read('version.txt').strip(),
     author='Jason Madden',
     author_email='jason@nextthought.com',
-    description="NTI Metadata App",
-    long_description=codecs.open('README.rst', encoding='utf-8').read(),
-    license='Proprietary',
-    keywords='pyramid preference',
+    description="The Metadata app layer",
+    long_description=(_read('README.rst') + '\n\n' + _read('CHANGES.rst')),
+    license='Apache',
+    keywords='pyramid metadata',
     classifiers=[
+        'Framework :: Zope',
+        'Framework :: Pyramid',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: Implementation :: CPython',
     ],
+    zip_safe=True,
     packages=find_packages('src'),
     package_dir={'': 'src'},
+    include_package_data=True,
     namespace_packages=['nti', 'nti.app'],
     install_requires=[
         'setuptools',
         'nti.async',
-        'nti.metadata'
+        'nti.metadata',
     ],
     entry_points=entry_points
 )
