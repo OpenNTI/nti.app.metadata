@@ -47,7 +47,7 @@ def get_mime_type(obj, default='unknown'):
     if not result:
         obj = IContentTypeAware(obj, None)
         result = parse_mimeType(obj)
-    return result or default
+    return str(result) if result else default
 
 
 def find_principal_metadata_objects(principal, accept=(), intids=None):
