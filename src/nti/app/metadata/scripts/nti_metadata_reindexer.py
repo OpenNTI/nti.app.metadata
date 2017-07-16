@@ -13,6 +13,8 @@ import os
 import pprint
 import argparse
 
+from zope import component
+
 from nti.app.metadata.reindexer import reindex
 
 from nti.dataserver.utils import run_with_dataserver
@@ -20,7 +22,17 @@ from nti.dataserver.utils.base_script import set_site
 from nti.dataserver.utils.base_script import create_context
 
 
+def _load_library():
+    try:
+        from nti.contentlibrary.interfaces import IContentPackageLibrary
+        library = component.queryUtility(IContentPackageLibrary)
+        if library is not None:
+            library.syncContentPackages()
+    except ImportError:
+        pass
+    
 def _process_args(args):
+    _load_library()
     set_site(args.site)
     result = reindex(system=args.system,
                      accept=args.types or (),
