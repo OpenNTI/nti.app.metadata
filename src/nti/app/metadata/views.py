@@ -159,7 +159,6 @@ class ReindexUserObjectsView(AbstractAuthenticatedView,
     def _do_call(self):
         values = self.readInput()
         term = values.get('term') or values.get('search')
-        all_users = values.get('all') or values.get('allUsers')
         system = values.get('system') or values.get('systemUser')
         usernames = values.get('usernames') or values.get('username')
 
@@ -180,8 +179,7 @@ class ReindexUserObjectsView(AbstractAuthenticatedView,
 
         result = reindex(accept=accept,
                          usernames=usernames,
-                         system=is_true(system),
-                         all_users=is_true(all_users))
+                         system=is_true(system))
         return result
 
 

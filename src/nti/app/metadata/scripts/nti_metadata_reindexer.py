@@ -16,12 +16,13 @@ import argparse
 from nti.app.metadata.reindexer import reindex
 
 from nti.dataserver.utils import run_with_dataserver
+from nti.dataserver.utils.base_script import set_site
 from nti.dataserver.utils.base_script import create_context
 
 
 def _process_args(args):
-    result = reindex(all_users=args.all,
-                     system=args.system,
+    set_site(args.site)
+    result = reindex(system=args.system,
                      accept=args.types or (),
                      usernames=args.usernames or ())
     if args.verbose:
@@ -37,7 +38,9 @@ def main():
                             dest='types',
                             nargs="+",
                             help="The mime types")
-    arg_parser.add_argument('-s', '--system', help="Include system user",
+    arg_parser.add_argument('-s', '--site', help="Application site",
+                            dest='site')
+    arg_parser.add_argument('-m', '--system', help="Include system user",
                             action='store_true',
                             dest='system')
     site_group = arg_parser.add_mutually_exclusive_group()
@@ -45,9 +48,6 @@ def main():
                             dest='usernames',
                             nargs="+",
                             help="The user names")
-    site_group.add_argument('-a', '--all', help="Include all users",
-                            action='store_true',
-                            dest='all')
 
     args = arg_parser.parse_args()
     env_dir = os.getenv('DATASERVER_DIR')

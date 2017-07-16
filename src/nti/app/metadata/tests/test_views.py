@@ -144,7 +144,7 @@ class TestAdminViews(ApplicationLayerTest):
 
         testapp = TestApp(self.app)
         res = testapp.post('/dataserver2/metadata/reindex_user_objects',
-                           json.dumps({'all': True,
+                           json.dumps({'username': username,
                                        'system': True}),
                            extra_environ=self._make_extra_environ(),
                            status=200)

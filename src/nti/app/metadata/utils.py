@@ -25,7 +25,7 @@ from ZODB.POSException import POSError
 
 from nti.contentlibrary.indexed_data import get_library_catalog
 
-from nti.dataserver.metadata.utils import get_iid
+from nti.dataserver.metadata.utils import queryId
 from nti.dataserver.metadata.utils import get_principal_metadata_objects
 
 from nti.externalization.interfaces import LocatedExternalDict
@@ -38,9 +38,15 @@ from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
 
+def parse_mimeType(obj):
+    return getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
+
+
 def get_mime_type(obj, default='unknown'):
-    obj = IContentTypeAware(obj, obj)
-    result = getattr(obj, 'mimeType', None) or getattr(obj, 'mime_type', None)
+    result = parse_mimeType(obj)
+    if not result:
+        obj = IContentTypeAware(obj, None)
+        result = parse_mimeType(obj)
     return result or default
 
 
@@ -50,7 +56,7 @@ def find_principal_metadata_objects(principal, accept=(), intids=None):
         mime_type = get_mime_type(obj)
         if accept and mime_type not in accept:
             continue
-        iid = get_iid(obj, intids=intids)
+        iid = queryId(obj, intids=intids)
         if iid is not None:
             yield iid, mime_type, obj
 
