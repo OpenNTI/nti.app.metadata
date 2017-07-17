@@ -73,7 +73,7 @@ from nti.metadata import metadata_catalogs
 
 from nti.metadata.processing import get_job_queue
 
-from nti.ntiids.ntiids import find_object_with_ntiid
+from nti.ntiids.ntiids import find_object_with_ntiid, is_valid_ntiid_string
 
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
@@ -139,20 +139,20 @@ class GetMimeTypesView(AbstractAuthenticatedView):
         return result
 
 
-@view_config(name='ReindexUserObjects')
-@view_config(name='reindex_user_objects')
+@view_config(name='Reindexer')
+@view_config(name='reindexer')
 @view_defaults(route_name='objects.generic.traversal',
                renderer='rest',
                request_method='POST',
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
-class ReindexUserObjectsView(AbstractAuthenticatedView,
+class ReindexerView(AbstractAuthenticatedView,
                              ModeledContentUploadRequestUtilsMixin):
 
     def readInput(self, value=None):
         result = CaseInsensitiveDict()
         if self.request.body:
-            values = super(ReindexUserObjectsView, self).readInput(value=value)
+            values = super(ReindexerView, self).readInput(value=value)
             result.update(**values)
         return result
 
@@ -180,68 +180,6 @@ class ReindexUserObjectsView(AbstractAuthenticatedView,
         result = reindex(accept=accept,
                          usernames=usernames,
                          system=is_true(system))
-        return result
-
-
-@view_config(name='Reindex')
-@view_config(name='reindex')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class ReindexView(AbstractAuthenticatedView,
-                  ModeledContentUploadRequestUtilsMixin):
-
-    def readInput(self, value=None):
-        if self.request.body:
-            result = super(ReindexView, self).readInput(value=value)
-            result = CaseInsensitiveDict(result)
-        else:
-            result = CaseInsensitiveDict(self.request.params)
-        return result
-
-    @property
-    def intids(self):
-        return component.getUtility(IIntIds)
-
-    def _do_call(self):
-        values = self.readInput()
-        ntiids = values.get('ntiid') or values.get('ntiids')
-        if isinstance(ntiids, six.string_types):
-            ntiids = ntiids.split()
-        if not ntiids:
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                'message': u"Must specify a valid NTIID.",
-                                'field': 'ntiid',
-                             },
-                             None)
-
-        all_catalog = is_true(values.get('all'))
-        if all_catalog:
-            catalog_interface = ICatalog
-        else:
-            catalog_interface = IMetadataCatalog
-        catalogs = component.getAllUtilitiesRegisteredFor(catalog_interface)
-        catalogs = list(catalogs)
-
-        result = LocatedExternalDict()
-        result.__name__ = self.request.view_name
-        result.__parent__ = self.request.context
-        items = result[ITEMS] = {}
-        for ntiid in set(ntiids):
-            obj = find_object_with_ntiid(ntiid)
-            doc_id = self.intids.queryId(obj)
-            if doc_id is None:
-                continue
-            items[ntiid] = doc_id
-            for catalog in catalogs:
-                if IMetadataCatalog.providedBy(catalog):
-                    catalog.force_index_doc(doc_id, obj)
-                else:
-                    catalog.index_doc(doc_id, obj)
-        result[TOTAL] = result[ITEM_COUNT] = len(items)
         return result
 
 
@@ -389,23 +327,30 @@ class IndexDocView(AbstractAuthenticatedView):
         }
         return result
 
-    def __call__(self):
-        request = self.request
-        doc_id = request.subpath[0] if request.subpath else ''
+    def find_object(self, s):
         try:
-            doc_id = int(doc_id)
+            doc_id = int(s)
         except (ValueError, TypeError):
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                'message': u"Invalid/Missing document id.",
-                             },
-                             None)
-
-        obj = self.intids.queryObject(doc_id)
+            if not is_valid_ntiid_string(s):
+                raise_json_error(self.request,
+                                 hexc.HTTPUnprocessableEntity,
+                                 {
+                                    'message': u"Invalid document id.",
+                                 },
+                                 None)
+            else:
+                obj = find_object_with_ntiid(s)
+                doc_id = self.intids.queryId(obj)
+        
+        obj = self.intids.queryObject(doc_id) if doc_id is not None else None
         if obj is None:
             raise hexc.HTTPNotFound()
+        return obj, doc_id
 
+    def __call__(self):
+        request = self.request
+        subpath = request.subpath[0] if request.subpath else ''
+        obj, doc_id = self.find_object(subpath)
         for name, catalog in self.catalogs.items():
             __traceback_info = name, catalog
             logger.warn("Indexing %s to %s", doc_id, name)

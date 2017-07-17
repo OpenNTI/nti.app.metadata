@@ -50,7 +50,7 @@ def get_mime_type(obj, default='unknown'):
     return str(result) if result else default
 
 
-def find_principal_metadata_objects(principal, accept=(), intids=None):
+def principal_metadata_objects(principal, accept=(), intids=None):
     intids = component.getUtility(IIntIds) if intids is None else intids
     for obj in get_principal_metadata_objects(principal):
         mime_type = get_mime_type(obj)

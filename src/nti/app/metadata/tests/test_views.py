@@ -35,8 +35,6 @@ from nti.dataserver.contenttypes import Note
 
 from nti.dataserver.metadata.index import get_metadata_catalog
 
-from nti.externalization.oids import to_external_ntiid_oid
-
 from nti.ntiids.ntiids import make_ntiid
 
 from nti.app.metadata.tests import MetadataApplicationTestLayer
@@ -135,7 +133,7 @@ class TestAdminViews(ApplicationLayerTest):
             assert_that(doc_id, is_in(index.ids()))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-    def test_reindex_user_objects(self):
+    def test_reindexer(self):
         username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
             ichigo = self._create_user(username=username)
@@ -143,7 +141,7 @@ class TestAdminViews(ApplicationLayerTest):
             ichigo.addContainedObject(note)
 
         testapp = TestApp(self.app)
-        res = testapp.post('/dataserver2/metadata/reindex_user_objects',
+        res = testapp.post('/dataserver2/metadata/reindexer',
                            json.dumps({'username': username,
                                        'system': False}),
                            extra_environ=self._make_extra_environ(),
@@ -154,25 +152,6 @@ class TestAdminViews(ApplicationLayerTest):
                                 'Elapsed', is_not(none()),
                                 'Total', greater_than_or_equal_to(1)))
 
-    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-    def test_reindex(self):
-        username = u'ichigo@bleach.com'
-        with mock_dataserver.mock_db_trans(self.ds):
-            ichigo = self._create_user(username=username)
-            note = self._create_note(u'As Nodt Fear', ichigo.username)
-            ichigo.addContainedObject(note)
-            ntiid = to_external_ntiid_oid(note)
-
-        testapp = TestApp(self.app)
-        res = testapp.post('/dataserver2/metadata/@@reindex',
-                           json.dumps({'all': True,
-                                       'ntiid': ntiid}),
-                           extra_environ=self._make_extra_environ(),
-                           status=200)
-
-        assert_that(res.json_body,
-                    has_entries('Total', 1))
-        
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_usg(self):
         username = u'ichigo@bleach.com'
