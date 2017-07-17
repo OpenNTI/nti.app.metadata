@@ -26,8 +26,6 @@ from zope.intid.interfaces import IIntIds
 
 from zope.traversing.interfaces import IPathAdapter
 
-from ZODB.POSException import POSError
-
 from zc.catalog.interfaces import IValueIndex
 
 from pyramid import httpexceptions as hexc
@@ -51,7 +49,6 @@ from nti.dataserver import authorization as nauth
 
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
-from nti.dataserver.interfaces import IUserGeneratedData
 
 from nti.dataserver.metadata.index import IX_CREATOR
 from nti.dataserver.metadata.index import IX_MIMETYPE
@@ -68,7 +65,6 @@ from nti.externalization.interfaces import StandardExternalFields
 
 from nti.metadata import QUEUE_NAMES
 
-from nti.metadata import queue_add
 from nti.metadata import metadata_catalogs
 
 from nti.metadata.processing import get_job_queue
@@ -183,43 +179,6 @@ class ReindexerView(AbstractAuthenticatedView,
         return result
 
 
-@view_config(name='IndexUserGeneratedData')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='POST',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class IndexUserGeneratedDataView(AbstractAuthenticatedView,
-                                 ModeledContentUploadRequestUtilsMixin):
-
-    def _do_call(self):
-        total = 0
-        count = 0
-        indexed = 0
-        intids = component.getUtility(IIntIds)
-        catalog = get_metadata_catalog()
-        if catalog is not None:
-            mimeTypeIdx = catalog[IX_MIMETYPE]
-            total = len(mimeTypeIdx.ids())
-            logger.info('Indexing new extent (count=%s)', total)
-            for uid in mimeTypeIdx.ids():
-                count += 1
-                if count % 5000 == 0:
-                    logger.info('Indexing new extent (%s/%s)', count, total)
-                obj = intids.queryObject(uid)
-                try:
-                    if IUserGeneratedData.providedBy(obj):
-                        queue_add(obj)
-                except (TypeError, POSError):
-                    pass
-        result = LocatedExternalDict()
-        result.__name__ = self.request.view_name
-        result.__parent__ = self.request.context
-        result[TOTAL] = total
-        result[ITEM_COUNT] = indexed
-        return result
-
-
 @view_config(name='CheckIndices')
 @view_config(name='check_indices')
 @view_defaults(route_name='objects.generic.traversal',
@@ -258,63 +217,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
         return result
 
 
-@view_config(name='UnindexDoc')
-@view_config(name='unindex_doc')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='POST',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class UnindexDocView(AbstractAuthenticatedView):
-
-    @Lazy
-    def intids(self):
-        return component.getUtility(IIntIds)
-
-    @Lazy
-    def catalogs(self):
-        result = {
-            c.__name__: c for c in component.getAllUtilitiesRegisteredFor(ICatalog)
-        }
-        try:
-            from nti.contentlibrary.indexed_data import get_library_catalog
-            catalog = get_library_catalog()
-            result[catalog.__name__] = catalog
-        except ImportError:
-            pass
-        return result
-
-    def __call__(self):
-        request = self.request
-        doc_id = request.subpath[0] if request.subpath else ''
-        try:
-            doc_id = int(doc_id)
-        except (ValueError, TypeError):
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                'message': u"Invalid/Missing document id.",
-                             },
-                             None)
-
-        if doc_id not in self.intids:
-            raise hexc.HTTPNotFound()
-
-        for name, catalog in self.catalogs.items():
-            __traceback_info = name, catalog
-            logger.warn("Unindexing %s from %s", doc_id, name)
-            catalog.unindex_doc(doc_id)
-        return hexc.HTTPNoContent()
-
-
-@view_config(name='IndexDoc')
-@view_config(name='index_doc')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='POST',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class IndexDocView(AbstractAuthenticatedView):
+class IndexDocMixin(AbstractAuthenticatedView):
 
     @Lazy
     def intids(self):
@@ -346,6 +249,37 @@ class IndexDocView(AbstractAuthenticatedView):
         if obj is None:
             raise hexc.HTTPNotFound()
         return obj, doc_id
+
+
+@view_config(name='UnindexDoc')
+@view_config(name='unindex_doc')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               request_method='POST',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class UnindexDocView(IndexDocMixin):
+
+
+    def __call__(self):
+        request = self.request
+        subpath = request.subpath[0] if request.subpath else ''
+        _, doc_id = self.find_object(subpath)
+        for name, catalog in self.catalogs.items():
+            __traceback_info = name, catalog
+            logger.warn("Unindexing %s from %s", doc_id, name)
+            catalog.unindex_doc(doc_id)
+        return hexc.HTTPNoContent()
+
+
+@view_config(name='IndexDoc')
+@view_config(name='index_doc')
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               request_method='POST',
+               context=MetadataPathAdapter,
+               permission=nauth.ACT_NTI_ADMIN)
+class IndexDocView(IndexDocMixin):
 
     def __call__(self):
         request = self.request
