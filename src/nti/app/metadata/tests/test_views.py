@@ -145,14 +145,14 @@ class TestAdminViews(ApplicationLayerTest):
         testapp = TestApp(self.app)
         res = testapp.post('/dataserver2/metadata/reindex_user_objects',
                            json.dumps({'username': username,
-                                       'system': True}),
+                                       'system': False}),
                            extra_environ=self._make_extra_environ(),
                            status=200)
 
         assert_that(res.json_body,
                     has_entries('MimeTypeCount', has_entry('application/vnd.nextthought.note', 1),
                                 'Elapsed', is_not(none()),
-                                'Total', 1))
+                                'Total', greater_than_or_equal_to(1)))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_reindex(self):
