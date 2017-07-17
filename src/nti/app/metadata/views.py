@@ -344,7 +344,6 @@ class UGDView(AbstractAuthenticatedView):
         # start w/ user
         result = [self.get_shared_container(user, ntiid, mime_types)]
         creator_index = self.catalog[IX_CREATOR].index
-
         # process communities followed
         context_cache = SharingContextCache()
         context_cache._build_entities_followed_for_read(user)
@@ -353,7 +352,6 @@ class UGDView(AbstractAuthenticatedView):
         for following in communities_seen:
             if following == user:
                 continue
-
             sink = self.catalog.family.IF.LFSet()
             uids = self.get_shared_container(following, ntiid, mime_types)
             for uid, username in creator_index.zip(uids):
@@ -361,12 +359,10 @@ class UGDView(AbstractAuthenticatedView):
                 if creator and not user.is_ignoring_shared_data_from(creator):
                     sink.add(uid)
             result.append(sink)
-
         # process other dynamic sharing targets
         for comm in context_cache(user._get_dynamic_sharing_targets_for_read):
             if comm in communities_seen:
                 continue
-
             sink = self.catalog.family.IF.LFSet()
             uids = self.get_shared_container(comm, ntiid, mime_types)
             for uid, username in creator_index.zip(uids):
@@ -374,7 +370,6 @@ class UGDView(AbstractAuthenticatedView):
                 if creator in persons_following or creator is user:
                     sink.add(uid)
             result.append(sink)
-
         result = self.catalog.family.IF.multiunion(result)
         return result
 
@@ -391,8 +386,7 @@ class UGDView(AbstractAuthenticatedView):
                 yield obj
 
     def readInput(self):
-        result = CaseInsensitiveDict(self.request.params)
-        return result
+        return CaseInsensitiveDict(self.request.params)
 
     def __call__(self):
         values = self.readInput()
