@@ -160,8 +160,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                             if processed:
                                 logger.info("%s record(s) unindexed. Source %s,%s",
                                             len(processed), name, catalog)
-            except (POSError, TypeError) as e:
-                print(e)
+            except (POSError, TypeError):
                 logger.error('Errors getting ids from index "%s" (%s) in catalog %s',
                              name, index, catalog)
 

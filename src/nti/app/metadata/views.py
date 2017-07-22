@@ -22,11 +22,18 @@ from zope.catalog.interfaces import ICatalog
 
 from zope.container.contained import Contained
 
+from zope.index.topic import TopicIndex
+
+from zope.index.topic.interfaces import ITopicFilteredSet
+
 from zope.intid.interfaces import IIntIds
 
 from zope.traversing.interfaces import IPathAdapter
 
 from zc.catalog.interfaces import IValueIndex
+from zc.catalog.interfaces import IIndexValues
+
+from ZODB.POSException import POSError
 
 from pyramid import httpexceptions as hexc
 
@@ -54,6 +61,7 @@ from nti.dataserver.metadata.index import IX_CREATOR
 from nti.dataserver.metadata.index import IX_MIMETYPE
 from nti.dataserver.metadata.index import IX_SHAREDWITH
 from nti.dataserver.metadata.index import IX_CONTAINERID
+from nti.dataserver.metadata.index import add_catalog_filters
 from nti.dataserver.metadata.index import get_metadata_catalog
 
 from nti.dataserver.users import User
@@ -71,6 +79,9 @@ from nti.metadata.processing import get_job_queue
 
 from nti.ntiids.ntiids import find_object_with_ntiid, is_valid_ntiid_string
 
+from nti.zodb import isBroken
+
+from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
 ITEMS = StandardExternalFields.ITEMS
@@ -143,7 +154,7 @@ class GetMimeTypesView(AbstractAuthenticatedView):
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
 class ReindexerView(AbstractAuthenticatedView,
-                             ModeledContentUploadRequestUtilsMixin):
+                    ModeledContentUploadRequestUtilsMixin):
 
     def readInput(self, value=None):
         result = CaseInsensitiveDict()
@@ -238,13 +249,13 @@ class IndexDocMixin(AbstractAuthenticatedView):
                 raise_json_error(self.request,
                                  hexc.HTTPUnprocessableEntity,
                                  {
-                                    'message': u"Invalid document id.",
+                                     'message': u"Invalid document id.",
                                  },
                                  None)
             else:
                 obj = find_object_with_ntiid(s)
                 doc_id = self.intids.queryId(obj)
-        
+
         obj = self.intids.queryObject(doc_id) if doc_id is not None else None
         if obj is None:
             raise hexc.HTTPNotFound()
@@ -259,7 +270,6 @@ class IndexDocMixin(AbstractAuthenticatedView):
                context=MetadataPathAdapter,
                permission=nauth.ACT_NTI_ADMIN)
 class UnindexDocView(IndexDocMixin):
-
 
     def __call__(self):
         request = self.request
@@ -396,8 +406,8 @@ class UGDView(AbstractAuthenticatedView):
             raise_json_error(self.request,
                              hexc.HTTPUnprocessableEntity,
                              {
-                                'message': u"'Provide a valid user.",
-                                'field': 'username',
+                                 'message': u"'Provide a valid user.",
+                                 'field': 'username',
                              },
                              None)
 
@@ -406,8 +416,8 @@ class UGDView(AbstractAuthenticatedView):
             raise_json_error(self.request,
                              hexc.HTTPUnprocessableEntity,
                              {
-                                'message': u"'Provide a valid container.",
-                                'field': 'ntiid',
+                                 'message': u"'Provide a valid container.",
+                                 'field': 'ntiid',
                              },
                              None)
 
@@ -420,6 +430,60 @@ class UGDView(AbstractAuthenticatedView):
         uids = self.get_ids(user, ntiid, mime_types)
         items = result[ITEMS] = list(self.query_objects(uids))
         result[ITEM_COUNT] = result[TOTAL] = len(items)
+        return result
+
+
+@view_config(context=MetadataPathAdapter)
+@view_defaults(route_name='objects.generic.traversal',
+               renderer='rest',
+               request_method='POST',
+               name="RebuildMetadataCatalog",
+               permission=nauth.ACT_NTI_ADMIN)
+class RebuildMetadataCatalogView(AbstractAuthenticatedView):
+
+    def _get_ids(self, catalog):
+        seen = set()
+        for name, index in catalog.items():
+            try:
+                if IIndexValues.providedBy(index):
+                    seen.update(index.ids())
+                elif IKeywordIndex.providedBy(index):
+                    seen.update(index.ids())
+                elif isinstance(index, TopicIndex):
+                    for filter_index in index._filters.values():
+                        if ITopicFilteredSet.providedBy(filter_index):
+                            seen.update(filter_index.getIds())
+            except (POSError, TypeError):
+                logger.error('Errors getting ids from index "%s" (%s)',
+                             name, index)
+        return seen
+
+    def __call__(self):
+        intids = component.getUtility(IIntIds)
+        # get all ids and clear indexes
+        catalog = get_metadata_catalog()
+        doc_ids = self._get_ids(catalog)
+        for index in catalog.values():
+            index.clear()
+        # filters need to be added
+        add_catalog_filters(catalog, catalog.family)
+        # reindex
+        count = 0
+        for doc_id in doc_ids:
+            obj = intids.queryObject(doc_id)
+            if obj is None:
+                continue
+            elif isBroken(obj):
+                try:
+                    intids.force_unregister(doc_id)
+                except KeyError:
+                    pass
+                continue
+            else:
+                count += 1
+                catalog.index_doc(doc_id, obj)
+        result = LocatedExternalDict()
+        result[ITEM_COUNT] = result[TOTAL] = count
         return result
 
 

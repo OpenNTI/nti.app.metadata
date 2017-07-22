@@ -170,3 +170,18 @@ class TestAdminViews(ApplicationLayerTest):
         
         assert_that(res.json_body,
                     has_entries('Total', 1))
+        
+    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
+    def test_rebuild_catalog(self):
+        username = u'ichigo@bleach.com'
+        with mock_dataserver.mock_db_trans(self.ds):
+            ichigo = self._create_user(username=username)
+            note = self._create_note(u'Kurosaki Ichigo', ichigo.username)
+            ichigo.addContainedObject(note)
+
+        testapp = TestApp(self.app)
+        res = testapp.post('/dataserver2/metadata/@@RebuildMetadataCatalog',
+                           extra_environ=self._make_extra_environ(),
+                           status=200)
+        assert_that(res.json_body,
+                    has_entries('Total', greater_than_or_equal_to(2)))
