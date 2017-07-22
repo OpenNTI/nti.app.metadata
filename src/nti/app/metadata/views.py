@@ -77,7 +77,8 @@ from nti.metadata import metadata_catalogs
 
 from nti.metadata.processing import get_job_queue
 
-from nti.ntiids.ntiids import find_object_with_ntiid, is_valid_ntiid_string
+from nti.ntiids.ntiids import is_valid_ntiid_string
+from nti.ntiids.ntiids import find_object_with_ntiid 
 
 from nti.zodb import isBroken
 
