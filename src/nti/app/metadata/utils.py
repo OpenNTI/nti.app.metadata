@@ -23,8 +23,6 @@ from zope.mimetype.interfaces import IContentTypeAware
 
 from ZODB.POSException import POSError
 
-from nti.contentlibrary.indexed_data import get_library_catalog
-
 from nti.dataserver.metadata.utils import queryId
 from nti.dataserver.metadata.utils import get_principal_metadata_objects
 
@@ -61,6 +59,16 @@ def principal_metadata_objects(principal, accept=(), intids=None):
             yield iid, mime_type, obj
 
 
+def _set_library_catalog(catalogs):
+    try:
+        from nti.contentlibrary.indexed_data import get_library_catalog
+        catalog = get_library_catalog()
+        if catalog is not None:
+            catalogs.append(catalog)
+    except ImportError:
+        pass
+
+
 def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                   test_broken=False, inspect_btrees=False):
     seen = set()
@@ -68,8 +76,10 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
     result = LocatedExternalDict()
     missing = result['Missing'] = set()
     intids = component.getUtility(IIntIds) if intids is None else intids
+
+    # get all catalogs
     catalogs = list(component.getAllUtilitiesRegisteredFor(catalog_interface))
-    catalogs.append(get_library_catalog())
+    _set_library_catalog(catalogs)
 
     def _unindex(catalogs, docid):
         for catalog in catalogs:
@@ -165,8 +175,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                              name, index, catalog)
 
     for catalog in catalogs:
-        if catalog is not None:
-            _process_catalog(catalog)
+        _process_catalog(catalog)
 
     result['Missing'] = sorted(missing)
     result['TotalIndexed'] = len(seen)
