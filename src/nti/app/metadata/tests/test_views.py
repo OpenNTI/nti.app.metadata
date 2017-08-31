@@ -11,7 +11,6 @@ from hamcrest import is_
 from hamcrest import none
 from hamcrest import is_in
 from hamcrest import is_not
-from hamcrest import contains
 from hamcrest import has_value
 from hamcrest import has_entry
 from hamcrest import assert_that
@@ -98,10 +97,8 @@ class TestAdminViews(ApplicationLayerTest):
         res = testapp.get('/dataserver2/metadata/@@mime_types',
                           extra_environ=self._make_extra_environ(),
                           status=200)
-
         assert_that(res.json_body,
-                    has_entries('Items', contains(u"application/vnd.nextthought.note"),
-                                'Total', is_(greater_than_or_equal_to(1))))
+                    has_entries('Total', is_(greater_than_or_equal_to(3))))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_unindex_index_doc(self):
