@@ -64,7 +64,7 @@ from nti.dataserver.metadata.index import IX_CONTAINERID
 from nti.dataserver.metadata.index import add_catalog_filters
 from nti.dataserver.metadata.index import get_metadata_catalog
 
-from nti.dataserver.users import User
+from nti.dataserver.users.users import User
 
 from nti.dataserver.sharing import SharingContextCache
 
@@ -79,8 +79,6 @@ from nti.metadata.processing import get_job_queue
 
 from nti.ntiids.ntiids import is_valid_ntiid_string
 from nti.ntiids.ntiids import find_object_with_ntiid 
-
-from nti.zodb import isBroken
 
 from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
@@ -474,16 +472,18 @@ class RebuildMetadataCatalogView(AbstractAuthenticatedView):
             obj = intids.queryObject(doc_id)
             if obj is None:
                 continue
-            elif isBroken(obj):
+            try:
+                catalog.force_index_doc(doc_id, obj)
+            except (POSError, TypeError):
                 try:
                     intids.force_unregister(doc_id)
                 except KeyError:
                     pass
-                continue
             else:
                 count += 1
-                catalog.index_doc(doc_id, obj)
         result = LocatedExternalDict()
+        result.__name__ = self.request.view_name
+        result.__parent__ = self.request.context
         result[ITEM_COUNT] = result[TOTAL] = count
         return result
 
