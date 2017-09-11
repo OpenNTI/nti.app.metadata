@@ -20,13 +20,13 @@ from zope.cachedescriptors.property import Lazy
 
 from zope.catalog.interfaces import ICatalog
 
-from zope.container.contained import Contained
-
 from zope.index.topic import TopicIndex
 
 from zope.index.topic.interfaces import ITopicFilteredSet
 
 from zope.intid.interfaces import IIntIds
+
+from zope.location.interfaces import IContained
 
 from zope.traversing.interfaces import IPathAdapter
 
@@ -46,9 +46,9 @@ from nti.app.externalization.error import raise_json_error
 
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
-from nti.app.metadata.utils import check_indices
-
 from nti.app.metadata.reindexer import reindex
+
+from nti.app.metadata.utils import check_indices
 
 from nti.common.string import is_true
 
@@ -90,8 +90,8 @@ MIMETYPE = StandardExternalFields.MIMETYPE
 ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 
 
-@interface.implementer(IPathAdapter)
-class MetadataPathAdapter(Contained):
+@interface.implementer(IPathAdapter, IContained)
+class MetadataPathAdapter(object):
 
     __name__ = 'metadata'
 
