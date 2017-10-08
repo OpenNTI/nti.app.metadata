@@ -25,7 +25,7 @@ class _MetadataSchemaManager(SchemaManager):
         super(_MetadataSchemaManager, self).__init__(
             generation=generation,
             minimum_generation=generation,
-            package_name='nti.metadata.generations')
+            package_name='nti.app.metadata.generations')
 
 
 def evolve(context):
