@@ -10,6 +10,13 @@
 
 	<include package="nti.metadata" />
 	
+	<!-- 
+	Generations. It has been moved from nti.metadata
+	-->
+	<utility factory=".generations.install._MetadataSchemaManager"
+			 name="nti.dataserver-metadata"
+			 provides="zope.generations.interfaces.IInstallableSchemaManager" />
+
 	<adapter name="metadata"
 			 for="nti.dataserver.interfaces.IDataserverFolder pyramid.interfaces.IRequest"
 			 factory=".views.MetadataPathAdapter"

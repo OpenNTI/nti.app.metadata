@@ -55,6 +55,7 @@ setup(
         'setuptools',
         'nti.async',
         'nti.metadata',
+        'zope.generations',
     ],
     extras_require={
         'test': TESTS_REQUIRE,
