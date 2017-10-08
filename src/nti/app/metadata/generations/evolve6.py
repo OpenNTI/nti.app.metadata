@@ -4,12 +4,9 @@
 .. $Id$
 """
 
-from __future__ import print_function, absolute_import, division
-__docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
-
-generation = 6
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 from zope import component
 
@@ -21,6 +18,10 @@ from zope.intid.interfaces import IIntIds
 from nti.metadata import queue_event
 
 from nti.metadata.interfaces import IMetadataQueue
+
+generation = 6
+
+logger = __import__('logging').getLogger(__name__)
 
 
 def do_evolve(context, generation=generation):
