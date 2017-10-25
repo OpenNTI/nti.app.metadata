@@ -4,10 +4,15 @@
 .. $Id$
 """
 
-from __future__ import print_function, absolute_import, division
-__docformat__ = "restructuredtext en"
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
-logger = __import__('logging').getLogger(__name__)
+try:
+    from BTrees.check import check as btree_check
+except ImportError:
+    def btree_check(item):
+        pass
 
 from zope import component
 
@@ -34,6 +39,8 @@ from nti.zope_catalog.catalog import isBroken
 
 from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
+
+logger = __import__('logging').getLogger(__name__)
 
 
 def parse_mimeType(obj):
@@ -109,21 +116,33 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                 pass
         return result
 
+    def _check_btree(name, item):
+        logger.info("---------> %s, %s", name,
+                    to_external_oid(item))
+        if hasattr(item, "_check"):
+            item._check()
+        btree_check(item)
+
+    def _check_values_to_documents(name, btree):
+        _check_btree(name, btree)
+        for key in btree.keys():
+            logger.info("\t---------> %r, %s", key,
+                        to_external_oid(key) or '')
+            value = btree[key]
+            if hasattr(value, "_check"):
+                value._check()
+            btree_check(value)
+
     def _check_btrees(name, index):
         logger.info("---> Checking %s, %s", name, index.__class__)
         index = getattr(index, 'index', index)
         try:
-            import BTrees.check
-            for name in ('values_to_documents', 'documents_to_values'):
-                item = getattr(index, name, None)
-                if item is not None:
-                    logger.info("---------> %s, %s", name,
-                                to_external_oid(item))
-                    if hasattr(item, "_check"):
-                        item._check()
-                    BTrees.check.check(item)
-        except (ImportError, AttributeError):
-            pass
+            btree = getattr(index, 'documents_to_values', None)
+            if btree is not None:
+                _check_btree('documents_to_values', btree)
+            btree = getattr(index, 'values_to_documents', None)
+            if btree is not None:
+                _check_values_to_documents('values_to_documents', btree)
         except Exception as e:
             logger.exception(e)
             raise e
