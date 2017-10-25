@@ -17,7 +17,7 @@ from hamcrest import assert_that
 from hamcrest import has_entries
 from hamcrest import greater_than_or_equal_to
 
-import json
+import simplejson as json
 
 from zope import component
 from zope import interface
@@ -25,16 +25,6 @@ from zope import interface
 from zope.intid.interfaces import IIntIds
 
 from ZODB.interfaces import IBroken
-
-from nti.base._compat import text_
-
-from nti.contentfragments.interfaces import IPlainTextContentFragment
-
-from nti.dataserver.contenttypes import Note
-
-from nti.dataserver.metadata.index import get_metadata_catalog
-
-from nti.ntiids.ntiids import make_ntiid
 
 from nti.app.metadata.tests import MetadataApplicationTestLayer
 
@@ -44,7 +34,17 @@ from nti.app.testing.decorators import WithSharedApplicationMockDSHandleChanges
 
 from nti.appserver.tests.test_application import TestApp
 
+from nti.base._compat import text_
+
+from nti.contentfragments.interfaces import IPlainTextContentFragment
+
+from nti.dataserver.contenttypes.note import Note
+
+from nti.dataserver.metadata.index import get_metadata_catalog
+
 from nti.dataserver.tests import mock_dataserver
+
+from nti.ntiids.ntiids import make_ntiid
 
 
 class TestAdminViews(ApplicationLayerTest):
