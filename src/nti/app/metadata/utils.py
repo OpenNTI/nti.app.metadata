@@ -118,7 +118,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
 
     def _check_btree(name, item):
         logger.info("---------> %s, %s", name,
-                    to_external_oid(item))
+                    to_external_oid(item) or '')
         if hasattr(item, "_check"):
             item._check()
         btree_check(item)
@@ -126,7 +126,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
     def _check_values_to_documents(name, btree):
         _check_btree(name, btree)
         for key in btree.keys():
-            logger.info("\t---------> %r, %s", key,
+            logger.info("\t---> %r, %s", key,
                         to_external_oid(key) or '')
             value = btree[key]
             if hasattr(value, "_check"):
