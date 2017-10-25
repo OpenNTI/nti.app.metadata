@@ -4,10 +4,9 @@
 .. $Id$
 """
 
-from __future__ import print_function, absolute_import, division
-__docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 import time
 from collections import defaultdict
@@ -30,6 +29,8 @@ from nti.externalization.interfaces import StandardExternalFields
 from nti.metadata import queue_add
 
 TOTAL = StandardExternalFields.TOTAL
+
+logger = __import__('logging').getLogger(__name__)
 
 
 def reindex_principal(principal, accept=(), intids=None, mt_count=None, seen=None):

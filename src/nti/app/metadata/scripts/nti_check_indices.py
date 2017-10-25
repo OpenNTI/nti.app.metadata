@@ -4,10 +4,9 @@
 .. $Id$
 """
 
-from __future__ import print_function, absolute_import, division
-__docformat__ = "restructuredtext en"
-
-logger = __import__('logging').getLogger(__name__)
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
 import os
 import pprint
@@ -22,6 +21,8 @@ from nti.dataserver.utils.base_script import create_context
 
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
+logger = __import__('logging').getLogger(__name__)
+
 
 def _process_args(args):
     if args.all:
@@ -31,7 +32,8 @@ def _process_args(args):
 
     result = check_indices(catalog_interface=catalog_interface,
                            test_broken=args.broken,
-                           inspect_btrees=args.check)
+                           inspect_btrees=args.btrees,
+                           inspect_treesets=args.treesets)
     if args.verbose:
         pprint.pprint(result)
     return result
@@ -45,7 +47,10 @@ def main():
     arg_parser.add_argument('-a', '--all', help="Include all catalogs",
                             action='store_true',
                             dest='all')
-    arg_parser.add_argument('-c', '--check', help="Check BTrees",
+    arg_parser.add_argument('-c', '--btrees', help="Check BTrees",
+                            action='store_true',
+                            dest='check')
+    arg_parser.add_argument('-t', '--treesets', help="Check TreeSets",
                             action='store_true',
                             dest='check')
     arg_parser.add_argument('-b', '--broken', help="Test for broken objects",

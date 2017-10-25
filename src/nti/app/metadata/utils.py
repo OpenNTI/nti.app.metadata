@@ -77,7 +77,7 @@ def _set_library_catalog(catalogs):
 
 
 def check_indices(catalog_interface=IMetadataCatalog, intids=None,
-                  test_broken=False, inspect_btrees=False):
+                  test_broken=False, inspect_btrees=False, inspect_treesets=False):
     seen = set()
     broken = dict()
     result = LocatedExternalDict()
@@ -125,13 +125,14 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
 
     def _check_values_to_documents(name, btree):
         _check_btree(name, btree)
-        for key in btree.keys():
-            logger.info("\t---> %r, %s", key,
-                        to_external_oid(key) or '')
-            value = btree[key]
-            if hasattr(value, "_check"):
-                value._check()
-            btree_check(value)
+        if inspect_treesets:
+            for key in btree.keys():
+                logger.info("\t---> %r, %s", key,
+                            to_external_oid(key) or '')
+                value = btree[key]
+                if hasattr(value, "_check"):
+                    value._check()
+                btree_check(value)
 
     def _check_btrees(name, index):
         logger.info("---> Checking %s, %s", name, index.__class__)
