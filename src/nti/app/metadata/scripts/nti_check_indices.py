@@ -49,7 +49,7 @@ def main():
                             dest='all')
     arg_parser.add_argument('-c', '--btrees', help="Check BTrees",
                             action='store_true',
-                            dest='check')
+                            dest='btrees')
     arg_parser.add_argument('-t', '--treesets', help="Check TreeSets",
                             action='store_true',
                             dest='check')
