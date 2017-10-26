@@ -52,7 +52,7 @@ def main():
                             dest='btrees')
     arg_parser.add_argument('-t', '--treesets', help="Check TreeSets",
                             action='store_true',
-                            dest='check')
+                            dest='treesets')
     arg_parser.add_argument('-b', '--broken', help="Test for broken objects",
                             action='store_true',
                             dest='broken')
