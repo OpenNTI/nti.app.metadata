@@ -12,11 +12,12 @@ import os
 import pprint
 import argparse
 
-from zope.catalog.interfaces import ICatalog
+from zope.catalog.interfaces import ICatalogEdit
 
 from nti.app.metadata.utils import check_indices
 
 from nti.dataserver.utils import run_with_dataserver
+
 from nti.dataserver.utils.base_script import create_context
 
 from nti.zope_catalog.interfaces import IMetadataCatalog
@@ -26,7 +27,7 @@ logger = __import__('logging').getLogger(__name__)
 
 def _process_args(args):
     if args.all:
-        catalog_interface = ICatalog
+        catalog_interface = ICatalogEdit
     else:
         catalog_interface = IMetadataCatalog
 
