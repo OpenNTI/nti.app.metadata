@@ -17,7 +17,7 @@ from zope import interface
 
 from zope.cachedescriptors.property import Lazy
 
-from zope.catalog.interfaces import ICatalog
+from zope.catalog.interfaces import ICatalogEdit
 
 from zope.index.topic import TopicIndex
 
@@ -218,7 +218,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
         test_broken = is_true(values.get('broken'))
         check_btrees = is_true(values.get('check'))
         if all_catalog:
-            catalog_interface = ICatalog
+            catalog_interface = ICatalogEdit
         else:
             catalog_interface = IMetadataCatalog
         result = check_indices(catalog_interface=catalog_interface,
@@ -237,7 +237,7 @@ class IndexDocMixin(AbstractAuthenticatedView):
     @Lazy
     def catalogs(self):
         result = {
-            c.__name__: c for c in component.getAllUtilitiesRegisteredFor(ICatalog)
+            c.__name__: c for c in component.getAllUtilitiesRegisteredFor(ICatalogEdit)
         }
         return result
 
