@@ -19,10 +19,6 @@ from zope.cachedescriptors.property import Lazy
 
 from zope.catalog.interfaces import ICatalogEdit
 
-from zope.index.topic import TopicIndex
-
-from zope.index.topic.interfaces import ITopicFilteredSet
-
 from zope.intid.interfaces import IIntIds
 
 from zope.location.interfaces import IContained
@@ -30,9 +26,6 @@ from zope.location.interfaces import IContained
 from zope.traversing.interfaces import IPathAdapter
 
 from zc.catalog.interfaces import IValueIndex
-from zc.catalog.interfaces import IIndexValues
-
-from ZODB.POSException import POSError
 
 from pyramid import httpexceptions as hexc
 
@@ -46,6 +39,7 @@ from nti.app.externalization.error import raise_json_error
 from nti.app.externalization.view_mixins import ModeledContentUploadRequestUtilsMixin
 
 from nti.app.metadata.reindexer import reindex
+from nti.app.metadata.reindexer import rebuild_metadata_catalog
 
 from nti.app.metadata.utils import check_indices
 
@@ -60,7 +54,6 @@ from nti.dataserver.metadata.index import IX_CREATOR
 from nti.dataserver.metadata.index import IX_MIMETYPE
 from nti.dataserver.metadata.index import IX_SHAREDWITH
 from nti.dataserver.metadata.index import IX_CONTAINERID
-from nti.dataserver.metadata.index import add_catalog_filters
 from nti.dataserver.metadata.index import get_metadata_catalog
 
 from nti.dataserver.users.users import User
@@ -79,8 +72,7 @@ from nti.metadata.processing import get_job_queue
 from nti.ntiids.ntiids import is_valid_ntiid_string
 from nti.ntiids.ntiids import find_object_with_ntiid 
 
-from nti.zope_catalog.interfaces import IKeywordIndex
-from nti.zope_catalog.interfaces import IMetadataCatalog
+from nti.zope_catalog.interfaces import IDeferredCatalog
 
 ITEMS = StandardExternalFields.ITEMS
 LINKS = StandardExternalFields.LINKS
@@ -220,7 +212,7 @@ class CheckIndicesView(AbstractAuthenticatedView,
         if all_catalog:
             catalog_interface = ICatalogEdit
         else:
-            catalog_interface = IMetadataCatalog
+            catalog_interface = IDeferredCatalog
         result = check_indices(catalog_interface=catalog_interface,
                                test_broken=test_broken,
                                intids=self.intids,
@@ -298,10 +290,7 @@ class IndexDocView(IndexDocMixin):
         for name, catalog in self.catalogs.items():
             __traceback_info = name, catalog
             logger.warn("Indexing %s to %s", doc_id, name)
-            if IMetadataCatalog.providedBy(catalog):
-                catalog.force_index_doc(doc_id, obj)
-            else:
-                catalog.index_doc(doc_id, obj)
+            catalog.index_doc(doc_id, obj)
         return hexc.HTTPNoContent()
 
 
@@ -441,49 +430,8 @@ class UGDView(AbstractAuthenticatedView):
                permission=nauth.ACT_NTI_ADMIN)
 class RebuildMetadataCatalogView(AbstractAuthenticatedView):
 
-    def _get_ids(self, catalog):
-        seen = set()
-        for name, index in catalog.items():
-            try:
-                if IIndexValues.providedBy(index):
-                    seen.update(index.ids())
-                elif IKeywordIndex.providedBy(index):
-                    seen.update(index.ids())
-                elif isinstance(index, TopicIndex):
-                    for filter_index in index._filters.values():
-                        if ITopicFilteredSet.providedBy(filter_index):
-                            seen.update(filter_index.getIds())
-            except (POSError, TypeError) as e:
-                logger.error('Errors %s while getting ids from index "%s" (%s)',
-                             e, name, index)
-        return seen
-
     def __call__(self):
-        intids = component.getUtility(IIntIds)
-        # get all ids and clear indexes
-        catalog = get_metadata_catalog()
-        doc_ids = self._get_ids(catalog)
-        for index in catalog.values():
-            index.clear()
-        # filters need to be added
-        add_catalog_filters(catalog, catalog.family)
-        # reindex
-        count = 0
-        for doc_id in doc_ids:
-            obj = intids.queryObject(doc_id)
-            if obj is None:
-                continue
-            try:
-                catalog.force_index_doc(doc_id, obj)
-            except (POSError, TypeError) as e:
-                logger.error('Error %s while indexing %s, %s',
-                             e, doc_id, type(obj))
-                try:
-                    intids.force_unregister(doc_id)
-                except KeyError:
-                    pass
-            else:
-                count += 1
+        count = rebuild_metadata_catalog()
         result = LocatedExternalDict()
         result.__name__ = self.request.view_name
         result.__parent__ = self.request.context

@@ -11,15 +11,26 @@ from __future__ import absolute_import
 import time
 from collections import defaultdict
 
+from ZODB.POSException import POSError
+
 from zope import component
 
+from zope.index.topic import TopicIndex
+
+from zope.index.topic.interfaces import ITopicFilteredSet
+
 from zope.intid.interfaces import IIntIds
+
+from zc.catalog.interfaces import IIndexValues
 
 from zope.security.management import system_user
 
 from nti.app.metadata.utils import principal_metadata_objects
 
 from nti.dataserver.interfaces import IUser
+
+from nti.dataserver.metadata.index import add_catalog_filters
+from nti.dataserver.metadata.index import get_metadata_catalog
 
 from nti.dataserver.users.users import User
 
@@ -28,7 +39,10 @@ from nti.externalization.interfaces import StandardExternalFields
 
 from nti.metadata import queue_add
 
+from nti.zope_catalog.interfaces import IKeywordIndex
+
 TOTAL = StandardExternalFields.TOTAL
+ITEM_COUNT = StandardExternalFields.ITEM_COUNT
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -78,3 +92,55 @@ def reindex(usernames=(), system=False, accept=(), intids=None):
     result['MimeTypeCount'] = dict(mt_count)
     logger.info("%s object(s) processed in %s(s)", total, elapsed)
     return result
+
+
+def get_catalog_doc_ids(catalog):
+    seen = set()
+    for name, index in catalog.items():
+        try:
+            if IIndexValues.providedBy(index):
+                seen.update(index.ids())
+            elif IKeywordIndex.providedBy(index):
+                seen.update(index.ids())
+            elif isinstance(index, TopicIndex):
+                for filter_index in index._filters.values():
+                    if ITopicFilteredSet.providedBy(filter_index):
+                        seen.update(filter_index.getIds())
+        except (POSError, TypeError) as e:
+            logger.error('Errors %s while getting ids from index "%s" (%s)',
+                         e, name, index)
+    return seen
+
+
+def rebuild_metadata_catalog(seen=None):
+    intids = component.getUtility(IIntIds)
+    # get all ids and clear indexes
+    catalog = get_metadata_catalog()
+    doc_ids = get_catalog_doc_ids(catalog)
+    for index in catalog.values():
+        index.clear()
+    # filters need to be added
+    add_catalog_filters(catalog, catalog.family)
+    # reindex
+    count = 0
+    seen = set() if seen is None else seen
+    logger.info("Processing %s object(s)", len(doc_ids))
+    for doc_id in doc_ids:
+        obj = intids.queryObject(doc_id)
+        if obj is None:
+            logger.debug("%s is missing", doc_id)
+            continue
+        try:
+            catalog.force_index_doc(doc_id, obj)
+        except (POSError, TypeError) as e:
+            logger.error('Error %s while indexing %s, %s',
+                         e, doc_id, type(obj))
+            try:
+                intids.force_unregister(doc_id)
+            except (AttributeError, KeyError):
+                pass
+        else:
+            count += 1
+            seen.add(doc_id)
+    logger.info("%s object(s) indexed", count)
+    return count

@@ -20,7 +20,7 @@ from nti.dataserver.utils import run_with_dataserver
 
 from nti.dataserver.utils.base_script import create_context
 
-from nti.zope_catalog.interfaces import IMetadataCatalog
+from nti.zope_catalog.interfaces import IDeferredCatalog
 
 logger = __import__('logging').getLogger(__name__)
 
@@ -29,7 +29,7 @@ def _process_args(args):
     if args.all:
         catalog_interface = ICatalogEdit
     else:
-        catalog_interface = IMetadataCatalog
+        catalog_interface = IDeferredCatalog
 
     result = check_indices(catalog_interface=catalog_interface,
                            test_broken=args.broken,
