@@ -453,9 +453,9 @@ class RebuildMetadataCatalogView(AbstractAuthenticatedView):
                     for filter_index in index._filters.values():
                         if ITopicFilteredSet.providedBy(filter_index):
                             seen.update(filter_index.getIds())
-            except (POSError, TypeError):
-                logger.error('Errors getting ids from index "%s" (%s)',
-                             name, index)
+            except (POSError, TypeError) as e:
+                logger.error('Errors %s while getting ids from index "%s" (%s)',
+                             e, name, index)
         return seen
 
     def __call__(self):
@@ -475,7 +475,9 @@ class RebuildMetadataCatalogView(AbstractAuthenticatedView):
                 continue
             try:
                 catalog.force_index_doc(doc_id, obj)
-            except (POSError, TypeError):
+            except (POSError, TypeError) as e:
+                logger.error('Error %s while indexing %s, %s',
+                             e, doc_id, type(obj))
                 try:
                     intids.force_unregister(doc_id)
                 except KeyError:
