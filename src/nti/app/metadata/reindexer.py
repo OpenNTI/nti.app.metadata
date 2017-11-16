@@ -23,6 +23,8 @@ from zope.intid.interfaces import IIntIds
 
 from zc.catalog.interfaces import IIndexValues
 
+from zc.catalog.index import NormalizationWrapper
+
 from zope.security.management import system_user
 
 from nti.app.metadata.utils import principal_metadata_objects
@@ -97,6 +99,8 @@ def reindex(usernames=(), system=False, accept=(), intids=None):
 def get_catalog_doc_ids(catalog):
     seen = set()
     for name, index in catalog.items():
+        if isinstance(catalog, NormalizationWrapper):
+            index = catalog.index
         try:
             if IIndexValues.providedBy(index):
                 seen.update(index.ids())
