@@ -22,6 +22,8 @@ from zope.index.topic.interfaces import ITopicFilteredSet
 
 from zope.intid.interfaces import IIntIds
 
+from zc.catalog.index import NormalizationWrapper
+
 from zc.catalog.interfaces import IIndexValues
 
 from zope.mimetype.interfaces import IContentTypeAware
@@ -153,6 +155,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                     getattr(catalog, '__name__', None),
                     catalog.__class__)
         for name, index in catalog.items():
+            if isinstance(index, NormalizationWrapper):
+                index = index.index
             try:
                 if IIndexValues.providedBy(index):
                     if inspect_btrees:

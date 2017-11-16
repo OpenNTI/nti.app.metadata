@@ -99,8 +99,8 @@ def reindex(usernames=(), system=False, accept=(), intids=None):
 def get_catalog_doc_ids(catalog):
     seen = set()
     for name, index in catalog.items():
-        if isinstance(catalog, NormalizationWrapper):
-            index = catalog.index
+        if isinstance(index, NormalizationWrapper):
+            index = index.index
         try:
             if IIndexValues.providedBy(index):
                 seen.update(index.ids())
