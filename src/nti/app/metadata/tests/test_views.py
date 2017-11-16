@@ -161,14 +161,16 @@ class TestAdminViews(ApplicationLayerTest):
 
         testapp = TestApp(self.app)
         res = testapp.get('/dataserver2/metadata/@@UserUGD',
-                          {'username': username,
-                           'ntiid': ntiid},
-                           extra_environ=self._make_extra_environ(),
-                           status=200)
-        
+                          {
+                              'username': username,
+                              'ntiid': ntiid
+                          },
+                          extra_environ=self._make_extra_environ(),
+                          status=200)
+
         assert_that(res.json_body,
                     has_entries('Total', 1))
-        
+
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_rebuild_catalog(self):
         username = u'ichigo@bleach.com'

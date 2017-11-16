@@ -32,8 +32,8 @@ def do_evolve(context, generation=generation):
     lsm = ds_folder.getSiteManager()
     intids = lsm.getUtility(IIntIds)
     with current_site(ds_folder):
-        assert  component.getSiteManager() == ds_folder.getSiteManager(), \
-                "Hooks not installed?"
+        assert component.getSiteManager() == ds_folder.getSiteManager(), \
+               "Hooks not installed?"
 
         meta_queue = lsm.queryUtility(provided=IMetadataQueue)
         if meta_queue is not None:
@@ -50,7 +50,7 @@ def do_evolve(context, generation=generation):
                 pass
 
     logger.info('Metadata evolution %s done', generation)
-        
+
 
 def evolve(context):
     """

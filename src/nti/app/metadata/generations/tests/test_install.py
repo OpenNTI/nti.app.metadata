@@ -29,5 +29,5 @@ class TestFunctionalInstall(unittest.TestCase):
         conn = mock_dataserver.current_transaction
         root = conn.root()
         generations = root['zope.generations']
-        assert_that(generations, 
+        assert_that(generations,
                     has_entry('nti.dataserver-metadata', 6))
