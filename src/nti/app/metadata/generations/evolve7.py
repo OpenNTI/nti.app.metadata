@@ -55,6 +55,7 @@ def do_evolve(context, generation=generation):
                "Hooks not installed?"
         _redis = component.queryUtility(IRedisClient)
         for name in QUEUE_NAMES:
+            # process jobs
             hash_key = name + '/hash'
             data = _redis.lrange(name, 0, -1)
             for job in (_unpickle(x) for x in data or ()):
@@ -63,6 +64,12 @@ def do_evolve(context, generation=generation):
                 except Exception:
                     logger.error("Cannot execute job %s", job)
             _reset(_redis, name, hash_key)
+            
+            # reset failed 
+            name += "/failed"
+            hash_key = name + '/hash'
+            _reset(_redis, name, hash_key)
+
 
     logger.info('Metadata evolution %s done', generation)
 
