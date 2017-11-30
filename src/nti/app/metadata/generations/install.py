@@ -28,5 +28,5 @@ class _MetadataSchemaManager(SchemaManager):
             package_name='nti.app.metadata.generations')
 
 
-def evolve(context):
+def evolve(unused_context):
     pass

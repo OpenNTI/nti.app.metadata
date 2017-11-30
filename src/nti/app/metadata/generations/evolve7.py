@@ -53,7 +53,6 @@ def do_evolve(context, generation=generation):
     with current_site(ds_folder):
         assert component.getSiteManager() == ds_folder.getSiteManager(), \
                "Hooks not installed?"
-
         _redis = component.queryUtility(IRedisClient)
         for name in QUEUE_NAMES:
             hash_key = name + '/hash'
