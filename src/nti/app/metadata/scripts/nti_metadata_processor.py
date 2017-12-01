@@ -14,7 +14,7 @@ from zope.location.interfaces import ILocation
 
 from z3c.autoinclude.zcml import includePluginsDirective
 
-from nti.async.utils.processor import Processor
+from nti.app.asynchronous.processor import Processor
 
 from nti.dataserver.utils.base_script import create_context
 

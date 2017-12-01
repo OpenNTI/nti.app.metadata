@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 from zope.generations.generations import SchemaManager
 
-generation = 6
+generation = 7
 
 logger = __import__('logging').getLogger(__name__)
 
