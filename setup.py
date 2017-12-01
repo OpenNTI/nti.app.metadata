@@ -56,6 +56,7 @@ setup(
     install_requires=[
         'setuptools',
         'BTrees',
+        'nti.app.asynchronous',
         'nti.async',
         'nti.base',
         'nti.common',
