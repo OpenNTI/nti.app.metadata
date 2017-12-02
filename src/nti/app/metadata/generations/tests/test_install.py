@@ -30,4 +30,4 @@ class TestFunctionalInstall(unittest.TestCase):
         root = conn.root()
         generations = root['zope.generations']
         assert_that(generations,
-                    has_entry('nti.dataserver-metadata', 6))
+                    has_entry('nti.dataserver-metadata', 7))
