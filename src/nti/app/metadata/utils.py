@@ -11,7 +11,7 @@ from __future__ import absolute_import
 try:
     from BTrees.check import check as btree_check
 except ImportError:
-    def btree_check(item):
+    def btree_check(unused_item):
         pass
 
 from zope import component
@@ -122,7 +122,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
         logger.info("---------> %s, %s", name,
                     to_external_oid(item) or '')
         if hasattr(item, "_check"):
-            item._check()
+            item._check()  # pylint: disable=protected-access
         btree_check(item)
 
     def _check_values_to_documents(name, btree):
@@ -133,7 +133,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                             to_external_oid(key) or '')
                 value = btree[key]
                 if hasattr(value, "_check"):
-                    value._check()
+                    value._check()  # pylint: disable=protected-access
                 btree_check(value)
 
     def _check_btrees(name, index):
@@ -162,11 +162,8 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                     if inspect_btrees:
                         _check_btrees(name, index)
                     docids = list(index.ids())
-                    processed = _process_ids(catalogs,
-                                             docids,
-                                             missing,
-                                             broken,
-                                             seen)
+                    processed = _process_ids(catalogs, docids,
+                                             missing, broken, seen)
                     if processed:
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
@@ -174,23 +171,18 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
                     if inspect_btrees:
                         _check_btrees(name, index)
                     docids = list(index.ids())
-                    processed = _process_ids(catalogs,
-                                             docids,
-                                             missing,
-                                             broken,
-                                             seen)
+                    processed = _process_ids(catalogs, docids,
+                                             missing, broken, seen)
                     if processed:
                         logger.info("%s record(s) unindexed. Source %s,%s",
                                     len(processed), name, catalog)
                 elif isinstance(index, TopicIndex):
+                    # pylint: disable=protected-access
                     for filter_index in index._filters.values():
                         if ITopicFilteredSet.providedBy(filter_index):
                             docids = list(filter_index.getIds())
-                            processed = _process_ids(catalogs,
-                                                     docids,
-                                                     missing,
-                                                     broken,
-                                                     seen)
+                            processed = _process_ids(catalogs, docids,
+                                                     missing, broken, seen)
                             if processed:
                                 logger.info("%s record(s) unindexed. Source %s,%s",
                                             len(processed), name, catalog)
