@@ -104,9 +104,10 @@ def username_search(search_term):
     min_inclusive, max_exclusive = _make_min_max_btree_range(search_term)
     dataserver = component.getUtility(IDataserver)
     users = IShardLayout(dataserver).users_folder
-    usernames = list(users.iterkeys(min_inclusive,
-                                    max_exclusive,
-                                    excludemax=True))
+    # pylint: disable=no-member
+    usernames = tuple(users.iterkeys(min_inclusive,
+                                     max_exclusive,
+                                     excludemax=True))
     return usernames
 
 
@@ -234,6 +235,7 @@ class IndexDocMixin(AbstractAuthenticatedView):
         return result
 
     def find_object(self, s):
+        # pylint: disable=no-member
         try:
             doc_id = int(s)
         except (ValueError, TypeError):
@@ -267,7 +269,7 @@ class UnindexDocView(IndexDocMixin):
         request = self.request
         subpath = request.subpath[0] if request.subpath else ''
         _, doc_id = self.find_object(subpath)
-        for name, catalog in self.catalogs.items():
+        for name, catalog in self.catalogs.items():  # pylint: disable=no-member
             __traceback_info = name, catalog
             logger.warn("Unindexing %s from %s", doc_id, name)
             catalog.unindex_doc(doc_id)
@@ -287,7 +289,7 @@ class IndexDocView(IndexDocMixin):
         request = self.request
         subpath = request.subpath[0] if request.subpath else ''
         obj, doc_id = self.find_object(subpath)
-        for name, catalog in self.catalogs.items():
+        for name, catalog in self.catalogs.items():  # pylint: disable=no-member
             __traceback_info = name, catalog
             logger.warn("Indexing %s to %s", doc_id, name)
             catalog.index_doc(doc_id, obj)
@@ -327,10 +329,12 @@ class UGDView(AbstractAuthenticatedView):
                  IX_CREATOR: {'any_of': (username,)}}
         if mime_types:
             query[IX_MIMETYPE] = {'any_of': mime_types}
+        # pylint: disable=no-member
         result = self.catalog.apply(query) or self.catalog.family.IF.LFSet()
         return result
 
     def get_shared_container(self, user, ntiid, mime_types=()):
+        # pylint: disable=no-member
         username = user.username
         query = {IX_CONTAINERID: {'any_of': (ntiid,)},
                  IX_SHAREDWITH: {'any_of': (username,)}}
@@ -340,11 +344,13 @@ class UGDView(AbstractAuthenticatedView):
         return result
 
     def get_shared(self, user, ntiid, mime_types=()):
+        # pylint: disable=no-member,unsubscriptable-object
         # start w/ user
         result = [self.get_shared_container(user, ntiid, mime_types)]
         creator_index = self.catalog[IX_CREATOR].index
         # process communities followed
         context_cache = SharingContextCache()
+        # pylint: disable=protected-access
         context_cache._build_entities_followed_for_read(user)
         persons_following = context_cache.persons_followed
         communities_seen = context_cache.communities_followed
@@ -375,10 +381,12 @@ class UGDView(AbstractAuthenticatedView):
     def get_ids(self, user, ntiid, mime_types=()):
         owned = self.get_owned(user, ntiid, mime_types)
         shared = self.get_shared(user, ntiid, mime_types)
+        # pylint: disable=no-member
         result = self.catalog.family.IF.union(owned, shared)
         return result
 
     def query_objects(self, uids=()):
+        # pylint: disable=no-member
         for doc_id in uids or ():
             obj = self.intids.queryObject(doc_id)
             if obj is not None:
