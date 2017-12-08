@@ -57,7 +57,6 @@ setup(
         'setuptools',
         'BTrees',
         'nti.app.asynchronous',
-        'nti.async',
         'nti.base',
         'nti.common',
         'nti.contentfragments',
