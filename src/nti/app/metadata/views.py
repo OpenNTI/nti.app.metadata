@@ -8,9 +8,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-import six
+from pyramid import httpexceptions as hexc
+
+from pyramid.view import view_config
+from pyramid.view import view_defaults
 
 from requests.structures import CaseInsensitiveDict
+
+import six
+
+from zc.catalog.interfaces import IValueIndex
 
 from zope import component
 from zope import interface
@@ -24,13 +31,6 @@ from zope.intid.interfaces import IIntIds
 from zope.location.interfaces import IContained
 
 from zope.traversing.interfaces import IPathAdapter
-
-from zc.catalog.interfaces import IValueIndex
-
-from pyramid import httpexceptions as hexc
-
-from pyramid.view import view_config
-from pyramid.view import view_defaults
 
 from nti.app.base.abstract_views import AbstractAuthenticatedView
 
@@ -50,15 +50,7 @@ from nti.dataserver import authorization as nauth
 from nti.dataserver.interfaces import IDataserver
 from nti.dataserver.interfaces import IShardLayout
 
-from nti.dataserver.metadata.index import IX_CREATOR
 from nti.dataserver.metadata.index import IX_MIMETYPE
-from nti.dataserver.metadata.index import IX_SHAREDWITH
-from nti.dataserver.metadata.index import IX_CONTAINERID
-from nti.dataserver.metadata.index import get_metadata_catalog
-
-from nti.dataserver.users.users import User
-
-from nti.dataserver.sharing import SharingContextCache
 
 from nti.externalization.interfaces import LocatedExternalDict
 from nti.externalization.interfaces import StandardExternalFields
@@ -294,140 +286,6 @@ class IndexDocView(IndexDocMixin):
             logger.warn("Indexing %s to %s", doc_id, name)
             catalog.index_doc(doc_id, obj)
         return hexc.HTTPNoContent()
-
-
-@view_config(name='UserUGD')
-@view_config(name='user_ugd')
-@view_defaults(route_name='objects.generic.traversal',
-               renderer='rest',
-               request_method='GET',
-               context=MetadataPathAdapter,
-               permission=nauth.ACT_NTI_ADMIN)
-class UGDView(AbstractAuthenticatedView):
-
-    @Lazy
-    def intids(self):
-        return component.getUtility(IIntIds)
-
-    @classmethod
-    def parse_mime_types(cls, value):
-        mime_types = set(value.split(',')) if value else ()
-        if '*/*' in mime_types:
-            mime_types = ()
-        elif mime_types:
-            mime_types = {e.strip().lower() for e in mime_types}
-            mime_types.discard('')
-        return tuple(mime_types) if mime_types else ()
-
-    @Lazy
-    def catalog(self):
-        return get_metadata_catalog()
-
-    def get_owned(self, user, ntiid, mime_types=()):
-        username = user.username
-        query = {IX_CONTAINERID: {'any_of': (ntiid,)},
-                 IX_CREATOR: {'any_of': (username,)}}
-        if mime_types:
-            query[IX_MIMETYPE] = {'any_of': mime_types}
-        # pylint: disable=no-member
-        result = self.catalog.apply(query) or self.catalog.family.IF.LFSet()
-        return result
-
-    def get_shared_container(self, user, ntiid, mime_types=()):
-        # pylint: disable=no-member
-        username = user.username
-        query = {IX_CONTAINERID: {'any_of': (ntiid,)},
-                 IX_SHAREDWITH: {'any_of': (username,)}}
-        if mime_types:
-            query[IX_MIMETYPE] = {'any_of': mime_types}
-        result = self.catalog.apply(query) or self.catalog.family.IF.LFSet()
-        return result
-
-    def get_shared(self, user, ntiid, mime_types=()):
-        # pylint: disable=no-member,unsubscriptable-object
-        # start w/ user
-        result = [self.get_shared_container(user, ntiid, mime_types)]
-        creator_index = self.catalog[IX_CREATOR].index
-        # process communities followed
-        context_cache = SharingContextCache()
-        # pylint: disable=protected-access
-        context_cache._build_entities_followed_for_read(user)
-        persons_following = context_cache.persons_followed
-        communities_seen = context_cache.communities_followed
-        for following in communities_seen:
-            if following == user:
-                continue
-            sink = self.catalog.family.IF.LFSet()
-            uids = self.get_shared_container(following, ntiid, mime_types)
-            for uid, username in creator_index.zip(uids):
-                creator = User.get_user(username) if username else None
-                if creator and not user.is_ignoring_shared_data_from(creator):
-                    sink.add(uid)
-            result.append(sink)
-        # process other dynamic sharing targets
-        for comm in context_cache(user._get_dynamic_sharing_targets_for_read):
-            if comm in communities_seen:
-                continue
-            sink = self.catalog.family.IF.LFSet()
-            uids = self.get_shared_container(comm, ntiid, mime_types)
-            for uid, username in creator_index.zip(uids):
-                creator = User.get_user(username) if username else None
-                if creator in persons_following or creator is user:
-                    sink.add(uid)
-            result.append(sink)
-        result = self.catalog.family.IF.multiunion(result)
-        return result
-
-    def get_ids(self, user, ntiid, mime_types=()):
-        owned = self.get_owned(user, ntiid, mime_types)
-        shared = self.get_shared(user, ntiid, mime_types)
-        # pylint: disable=no-member
-        result = self.catalog.family.IF.union(owned, shared)
-        return result
-
-    def query_objects(self, uids=()):
-        # pylint: disable=no-member
-        for doc_id in uids or ():
-            obj = self.intids.queryObject(doc_id)
-            if obj is not None:
-                yield obj
-
-    def readInput(self):
-        return CaseInsensitiveDict(self.request.params)
-
-    def __call__(self):
-        values = self.readInput()
-        username = values.get('user') or values.get('username')
-        user = User.get_user(username or '')
-        if user is None:
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                 'message': u"'Provide a valid user.",
-                                 'field': 'username',
-                             },
-                             None)
-
-        ntiid = values.get('ntiid') or values.get('containerId')
-        if not ntiid:
-            raise_json_error(self.request,
-                             hexc.HTTPUnprocessableEntity,
-                             {
-                                 'message': u"'Provide a valid container.",
-                                 'field': 'ntiid',
-                             },
-                             None)
-
-        mime_types = values.get('mime_types') or values.get('mimeTypes') or u''
-        mime_types = self.parse_mime_types(mime_types)
-
-        result = LocatedExternalDict()
-        result.__name__ = self.request.view_name
-        result.__parent__ = self.request.context
-        uids = self.get_ids(user, ntiid, mime_types)
-        items = result[ITEMS] = list(self.query_objects(uids))
-        result[ITEM_COUNT] = result[TOTAL] = len(items)
-        return result
 
 
 @view_config(context=MetadataPathAdapter)

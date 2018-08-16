@@ -5,8 +5,7 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import absolute_import
 
-# disable: accessing protected members, too many methods
-# pylint: disable=W0212,R0904
+# pylint: disable=protected-access,too-many-public-methods
 
 from hamcrest import is_
 from hamcrest import none
@@ -20,12 +19,12 @@ from hamcrest import greater_than_or_equal_to
 
 import simplejson as json
 
+from ZODB.interfaces import IBroken
+
 from zope import component
 from zope import interface
 
 from zope.intid.interfaces import IIntIds
-
-from ZODB.interfaces import IBroken
 
 from nti.app.metadata.tests import MetadataApplicationTestLayer
 
@@ -74,6 +73,7 @@ class TestAdminViews(ApplicationLayerTest):
             ichigo.addContainedObject(note)
             interface.alsoProvides(note, IBroken)
 
+        # pylint: disable=no-member
         testapp = TestApp(self.app)
         res = testapp.post('/dataserver2/metadata/@@check_indices',
                            json.dumps({'broken': True}),
@@ -94,6 +94,7 @@ class TestAdminViews(ApplicationLayerTest):
             note = self._create_note(u'As Nodt Fear', ichigo.username)
             ichigo.addContainedObject(note)
 
+        # pylint: disable=no-member
         testapp = TestApp(self.app)
         res = testapp.get('/dataserver2/metadata/@@mime_types',
                           extra_environ=self._make_extra_environ(),
@@ -111,6 +112,7 @@ class TestAdminViews(ApplicationLayerTest):
             intids = component.getUtility(IIntIds)
             doc_id = intids.queryId(note)
 
+        # pylint: disable=no-member
         testapp = TestApp(self.app)
         testapp.post('/dataserver2/metadata/unindex_doc/%s' % doc_id,
                      extra_environ=self._make_extra_environ(),
@@ -138,6 +140,7 @@ class TestAdminViews(ApplicationLayerTest):
             note = self._create_note(u'As Nodt Fear', ichigo.username)
             ichigo.addContainedObject(note)
 
+        # pylint: disable=no-member
         testapp = TestApp(self.app)
         res = testapp.post('/dataserver2/metadata/reindexer',
                            json.dumps({'username': username,
@@ -151,27 +154,6 @@ class TestAdminViews(ApplicationLayerTest):
                                 'Total', greater_than_or_equal_to(1)))
 
     @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
-    def test_usg(self):
-        username = u'ichigo@bleach.com'
-        with mock_dataserver.mock_db_trans(self.ds):
-            ichigo = self._create_user(username=username)
-            note = self._create_note(u'Kurosaki Ichigo', ichigo.username)
-            ichigo.addContainedObject(note)
-            ntiid = note.containerId
-
-        testapp = TestApp(self.app)
-        res = testapp.get('/dataserver2/metadata/@@UserUGD',
-                          {
-                              'username': username,
-                              'ntiid': ntiid
-                          },
-                          extra_environ=self._make_extra_environ(),
-                          status=200)
-
-        assert_that(res.json_body,
-                    has_entries('Total', 1))
-
-    @WithSharedApplicationMockDSHandleChanges(users=True, testapp=True)
     def test_rebuild_catalog(self):
         username = u'ichigo@bleach.com'
         with mock_dataserver.mock_db_trans(self.ds):
@@ -179,6 +161,7 @@ class TestAdminViews(ApplicationLayerTest):
             note = self._create_note(u'Kurosaki Ichigo', ichigo.username)
             ichigo.addContainedObject(note)
 
+        # pylint: disable=no-member
         testapp = TestApp(self.app)
         res = testapp.post('/dataserver2/metadata/@@RebuildMetadataCatalog',
                            extra_environ=self._make_extra_environ(),
