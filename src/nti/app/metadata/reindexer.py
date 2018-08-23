@@ -11,6 +11,10 @@ from __future__ import absolute_import
 import time
 from collections import defaultdict
 
+from zc.catalog.interfaces import IIndexValues
+
+from zc.catalog.index import NormalizationWrapper
+
 from ZODB.POSException import POSError
 
 from zope import component
@@ -20,10 +24,6 @@ from zope.index.topic import TopicIndex
 from zope.index.topic.interfaces import ITopicFilteredSet
 
 from zope.intid.interfaces import IIntIds
-
-from zc.catalog.interfaces import IIndexValues
-
-from zc.catalog.index import NormalizationWrapper
 
 from zope.security.management import system_user
 
@@ -107,11 +107,12 @@ def get_catalog_doc_ids(catalog):
             elif IKeywordIndex.providedBy(index):
                 seen.update(index.ids())
             elif isinstance(index, TopicIndex):
+                # pylint: disable=protected-access
                 for filter_index in index._filters.values():
                     if ITopicFilteredSet.providedBy(filter_index):
                         seen.update(filter_index.getIds())
         except (POSError, TypeError) as e:
-            logger.error('Errors %s while getting ids from index "%s" (%s)',
+            logger.error('Error %s while getting ids from index "%s" (%s)',
                          e, name, index)
     return seen
 
