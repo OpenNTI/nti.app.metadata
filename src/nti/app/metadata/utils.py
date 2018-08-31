@@ -39,6 +39,7 @@ from nti.externalization.oids import to_external_oid
 
 from nti.zope_catalog.catalog import isBroken
 
+from nti.zope_catalog.interfaces import IFieldIndex
 from nti.zope_catalog.interfaces import IKeywordIndex
 from nti.zope_catalog.interfaces import IMetadataCatalog
 
@@ -158,7 +159,7 @@ def check_indices(catalog_interface=IMetadataCatalog, intids=None,
             if isinstance(index, NormalizationWrapper):
                 index = index.index
             try:
-                if IIndexValues.providedBy(index):
+                if IIndexValues.providedBy(index) or IFieldIndex.providedBy(index):
                     if inspect_btrees:
                         _check_btrees(name, index)
                     docids = list(index.ids())
