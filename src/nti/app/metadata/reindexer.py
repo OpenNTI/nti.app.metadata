@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import time
 from collections import defaultdict
 
+import transaction
+
 from zc.catalog.interfaces import IIndexValues
 
 from zc.catalog.index import NormalizationWrapper
@@ -165,12 +167,17 @@ def rebuild_metadata_catalog_from_scratch():
     # reindex
     count = 0
     for intid in intids:
-        obj = intids.queryObject(intid)
-        if obj is None:
-            logger.warn("%s is missing", intid)
-            continue
-        catalog.force_index_doc(intid, obj)
-        count += 1
+        savepoint = transaction.savepoint()
+        try:
+            obj = intids.queryObject(intid)
+            if obj is None:
+                logger.warn("%s is missing", intid)
+                continue
+            catalog.force_index_doc(intid, obj)
+            count += 1
+        except:
+            logger.exception('An error occurred reindexing %s' % intid)
+            savepoint.rollback()
         if count % 1000 == 0:
             logger.info("%s object(s) indexed", count)
     logger.info("%s object(s) indexed", count)
