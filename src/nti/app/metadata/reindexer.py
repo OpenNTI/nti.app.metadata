@@ -149,3 +149,29 @@ def rebuild_metadata_catalog(seen=None):
             seen.add(doc_id)
     logger.info("%s object(s) indexed", count)
     return count
+
+def rebuild_metadata_catalog_from_scratch():
+    """
+    Like :ref:rebuild_metadata_catalog but rebuilds from
+    all registered intids not just the docids currently in the catalog.
+    """
+    intids = component.getUtility(IIntIds)
+    # get all ids and clear indexes
+    catalog = get_metadata_catalog()
+    for index in catalog.values():
+        index.clear()
+    # filters need to be added
+    add_catalog_filters(catalog, catalog.family)
+    # reindex
+    count = 0
+    for intid in intids:
+        obj = intids.queryObject(intid)
+        if obj is None:
+            logger.warn("%s is missing", intid)
+            continue
+        catalog.force_index_doc(intid, obj)
+        count += 1
+        if count % 1000 == 0:
+            logger.info("%s object(s) indexed", count)
+    logger.info("%s object(s) indexed", count)
+    return count
